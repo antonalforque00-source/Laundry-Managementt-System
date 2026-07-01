@@ -1,0 +1,6 @@
+{
+  "name": "Laundry Management System",
+  "description": "A comprehensive Laundry Pickup and Delivery Management System addressing SDG 8 and 9.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

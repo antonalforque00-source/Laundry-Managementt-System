@@ -500,8 +500,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb'
   },
   roleButtonActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb'
+    backgroundColor: '#0d9488',
+    borderColor: '#0d9488'
   },
   roleButtonText: {
     fontSize: 13,
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
     padding: 16
   },
   promoCard: {
-    backgroundColor: '#1e3a8a',
+    backgroundColor: '#0f766e',
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     elevation: 3
   },
   promoTitle: {
-    color: '#93c5fd',
+    color: '#99f6e4',
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase'
@@ -604,8 +604,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb'
   },
   serviceSelectBtnActive: {
-    backgroundColor: '#eff6ff',
-    borderColor: '#3b82f6'
+    backgroundColor: '#f0fdfa',
+    borderColor: '#0d9488'
   },
   serviceSelectText: {
     fontSize: 11,
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
     color: '#4b5563'
   },
   serviceSelectTextActive: {
-    color: '#2563eb'
+    color: '#0d9488'
   },
   row: {
     flexDirection: 'row',
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     color: '#16a34a'
   },
   submitButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#0d9488',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',

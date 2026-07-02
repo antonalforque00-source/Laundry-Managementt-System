@@ -311,10 +311,10 @@ export default function App() {
                 
                 <View style={styles.actionButtonsRow}>
                   <TouchableOpacity 
-                    style={[styles.actionBtn, { backgroundColor: '#e0f2fe' }]}
+                    style={[styles.actionBtn, { backgroundColor: '#ccfbf1' }]}
                     onPress={() => updateOrderStatus(item.id, 'Picked Up')}
                   >
-                    <Text style={{ color: '#0369a1', fontWeight: 'bold', fontSize: 13 }}>🚴 Mark Picked Up</Text>
+                    <Text style={{ color: '#0f766e', fontWeight: 'bold', fontSize: 13 }}>🚴 Mark Picked Up</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.actionBtn, { backgroundColor: '#dcfce7' }]}
@@ -703,7 +703,7 @@ const styles = StyleSheet.create({
     borderRadius: 8
   },
   statusPending: { backgroundColor: '#fef3c7' },
-  statusPickedUp: { backgroundColor: '#e0f2fe' },
+  statusPickedUp: { backgroundColor: '#ccfbf1' },
   statusProcessing: { backgroundColor: '#f3e8ff' },
   statusReady: { backgroundColor: '#dcfce7' },
   statusDelivered: { backgroundColor: '#f3f4f6' },
@@ -791,7 +791,7 @@ const styles = StyleSheet.create({
   terminalText: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 11,
-    color: '#38bdf8',
+    color: '#2dd4bf',
     marginBottom: 4,
     lineHeight: 16
   },

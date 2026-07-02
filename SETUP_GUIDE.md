@@ -104,6 +104,14 @@ To switch to a cloud-hosted database, simply navigate to the **Admin Dashboard**
 
 ---
 
+## 🎨 Unified PureDrop Brand Styling (Teal & Emerald)
+
+To match the high-end, premium aesthetic of **PureDrop**, we have fully aligned the design systems of both portals:
+1. **Teal Base Tone:** All primary interaction buttons, role buttons, active selection pills, and accent cards are set to `#0d9488` (Teal) and `#0f766e` (Deep Teal).
+2. **Visual Consistency:** No more conflicting blue elements! Both the **Web Client** and **Expo Mobile App** now share the exact same beautiful teal-accented identity, looking like a highly polished unified product.
+
+---
+
 ## 🛠️ Folder Structure Reference
 
 Here is how the project files are organized to support both Web and Expo Mobile development:

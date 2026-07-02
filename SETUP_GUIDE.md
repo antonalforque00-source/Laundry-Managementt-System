@@ -6,6 +6,36 @@ Follow this guide to run the system with zero errors during your presentation!
 
 ---
 
+## 🛠️ HOW TO FIX: "npm error ERESOLVE could not resolve" (CRITICAL)
+
+If you see an error like `ERESOLVE could not resolve` or `Conflicting peer dependency: react@18.2.0` when running `npm install`, this is because the system is configured to support Expo Go (which requires **React 18.2.0**) while your local files have leftover cached package locks.
+
+### 🌟 Simple 2-Step Fix:
+Run the following commands in your VSCode Terminal:
+
+#### Option A (Recommended):
+Delete the lock file and run install cleanly:
+```bash
+# On Windows (Command Prompt or PowerShell):
+del package-lock.json
+npm install
+```
+```bash
+# On Mac/Linux:
+rm package-lock.json
+npm install
+```
+
+#### Option B (Fastest bypass):
+Tell npm to install by bypassing strict React peer versions:
+```bash
+npm install --legacy-peer-deps
+```
+
+After doing either of these, running **`npx expo start`** or **`npm run dev`** will run perfectly without any errors!
+
+---
+
 ## 🚀 Part 1: Running the Full-Stack Web Application
 
 The web portal includes an Express Node.js server, local persistent storage, live Supabase connectivity, and interactive admin/customer/rider dashboards.

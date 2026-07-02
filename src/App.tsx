@@ -469,37 +469,44 @@ export default function App() {
           <div className="absolute top-[-20%] left-[-10%] w-[50%] aspect-square rounded-full bg-teal-200/20 blur-[130px] pointer-events-none -z-10" />
           <div className="absolute bottom-[-20%] right-[-10%] w-[50%] aspect-square rounded-full bg-cyan-200/20 blur-[130px] pointer-events-none -z-10" />
 
-          {/* Elegant Top Header when Logged In */}
+          {/* Top Header to match user's requested layout */}
           {user && (
-            <header className="bg-white/85 backdrop-blur-md border-b border-slate-100 py-3.5 px-6 shrink-0 shadow-xs sticky top-0 z-50">
-              <div className="max-w-6xl mx-auto flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 bg-[#0d9488] rounded-xl flex items-center justify-center text-white shadow-sm shadow-[#0d9488]/20">
-                    <svg className="w-4.5 h-4.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 6c.6.5 1.2 1 2.5 1s2.5-1 3.5-1 2.2 1 3.5 1s2.5-1 3.5-1 2.2 1 3.5 1s2.5-1 3.5-1" />
-                      <path d="M2 12c.6.5 1.2 1 2.5 1s2.5-1 3.5-1 2.2 1 3.5 1s2.5-1 3.5-1 2.2 1 3.5 1s2.5-1 3.5-1" />
-                      <path d="M2 18c.6.5 1.2 1 2.5 1s2.5-1 3.5-1 2.2 1 3.5 1s2.5-1 3.5-1 2.2 1 3.5 1s2.5-1 3.5-1" />
-                    </svg>
-                  </div>
+            <header className="bg-white border-b border-gray-200 py-4 px-6 shrink-0 shadow-sm z-50">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h1 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-                      Pure<span className="text-[#0d9488]">Drop</span>
-                      <span className="text-[9px] bg-teal-100 text-[#0d9488] px-1.5 py-0.5 rounded-full font-extrabold uppercase tracking-wider">{user.role} Portal</span>
+                    <h2 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Laundry Portal Deployment System</h2>
+                    <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+                      🧺 LPDMS Mobile
                     </h1>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-100 rounded-xl px-3 py-1.5">
-                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                    {user.name}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-sm font-bold text-emerald-700 bg-white border border-emerald-200 rounded-full px-3 py-1 shadow-sm">
+                      <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                      Live
+                    </div>
+                    <button 
+                      onClick={logout}
+                      className="text-sm font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-full px-4 py-1 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4" /> Log Out
+                    </button>
                   </div>
-                  <button 
-                    onClick={logout}
-                    className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/60 border border-rose-100/40 rounded-xl px-3.5 py-1.5 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-                  >
-                    <LogOut className="w-3.5 h-3.5" /> Log Out
-                  </button>
+                </div>
+                {/* Role Indicators matching screenshot */}
+                <div className="flex items-center gap-2">
+                  <div className={`px-5 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 transition-colors ${user.role === 'customer' ? 'bg-[#0d9488] text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}>
+                    👤 Customer
+                  </div>
+                  <div className={`px-5 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 transition-colors ${user.role === 'rider' ? 'bg-[#0d9488] text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}>
+                    🛵 Rider
+                  </div>
+                  <div className={`px-5 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 transition-colors ${user.role === 'staff' ? 'bg-[#0d9488] text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}>
+                    📦 Staff
+                  </div>
+                  <div className={`px-5 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 transition-colors ${user.role === 'admin' ? 'bg-[#0d9488] text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}>
+                    👑 Admin
+                  </div>
                 </div>
               </div>
             </header>
@@ -512,13 +519,11 @@ export default function App() {
               
               <Route path="/" element={
                 !user ? <Navigate to="/login?step=login" replace /> :
-                <div className="max-w-6xl w-full mx-auto p-4 md:p-6 flex-1 flex flex-col justify-start">
-                  <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-xs border border-slate-150 p-5 md:p-8 flex-1 flex flex-col relative overflow-hidden">
-                    {user.role === 'customer' ? <CustomerDashboard /> :
-                     user.role === 'rider' ? <RiderDashboard /> :
-                     user.role === 'staff' ? <StaffDashboard /> :
-                     <AdminDashboard />}
-                  </div>
+                <div className="flex-1 w-full max-w-7xl mx-auto pt-6 pb-12 flex flex-col h-full px-4 md:px-0">
+                  {user.role === 'customer' ? <CustomerDashboard /> :
+                   user.role === 'rider' ? <RiderDashboard /> :
+                   user.role === 'staff' ? <StaffDashboard /> :
+                   <AdminDashboard />}
                 </div>
               } />
             </Routes>

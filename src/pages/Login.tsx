@@ -204,7 +204,7 @@ export default function Login() {
             {/* Top Row Back Navigation */}
             <div className="h-10 flex items-center mb-4">
               <button
-                onClick={() => { setStep('welcome'); setError(''); setSuccess(''); }}
+                onClick={() => { setStep('welcome'); setError(''); setSuccess(''); window.history.pushState({}, '', '/login?step=welcome'); }}
                 className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-500 transition-all active:scale-95 cursor-pointer border border-slate-100"
               >
                 <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
@@ -305,7 +305,7 @@ export default function Login() {
             {/* Top Row Back Navigation */}
             <div className="h-10 flex items-center mb-4">
               <button
-                onClick={() => { setStep('welcome'); setError(''); setSuccess(''); }}
+                onClick={() => { setStep('welcome'); setError(''); setSuccess(''); window.history.pushState({}, '', '/login?step=welcome'); }}
                 className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-500 transition-all active:scale-95 cursor-pointer border border-slate-100"
               >
                 <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />

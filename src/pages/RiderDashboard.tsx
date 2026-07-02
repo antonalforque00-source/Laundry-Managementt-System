@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
+import { useAuth } from '../App';
 import { Order, OrderStatus, STATUS_LABELS } from '../types';
 import { 
   MapPin, QrCode, CheckCircle, Package, ArrowRight, Navigation2, 
@@ -7,6 +8,7 @@ import {
 } from 'lucide-react';
 
 export default function RiderDashboard() {
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -21,17 +23,26 @@ export default function RiderDashboard() {
   const [isDrawing, setIsDrawing] = useState(false);
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    if (user?.id) {
+      loadOrders();
+    }
+  }, [user]);
 
   const loadOrders = async () => {
-    const data = await api.getOrders();
-    // Rider handles pickup schedules and ready to deliver
-    const relevant = data.filter(o => 
-      ['pickup_scheduled', 'ready_for_delivery'].includes(o.status)
-    );
-    setOrders(relevant);
-    setLoading(false);
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const data = await api.getOrders(user.id, 'rider');
+      // Rider handles pickup schedules and ready to deliver
+      const relevant = data.filter(o => 
+        ['pickup_scheduled', 'ready_for_delivery'].includes(o.status)
+      );
+      setOrders(relevant);
+    } catch (err) {
+      console.error("Failed to load rider orders:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStartProcess = (order: Order) => {
@@ -55,7 +66,7 @@ export default function RiderDashboard() {
       // For pickups, we advance directly once scanned
       await api.updateOrder(scanning.id, { 
         status: nextStatus,
-        updatedBy: "Rider John"
+        updatedBy: user?.name || "Rider"
       });
       setScanning(null);
       setCameraImage('');
@@ -124,7 +135,7 @@ export default function RiderDashboard() {
     await api.updateOrder(signingOrder.id, { 
       status: 'delivered',
       isPaid: true, // auto cash collected if COD
-      updatedBy: "Rider John"
+      updatedBy: user?.name || "Rider"
     });
 
     setSigningOrder(null);
@@ -137,7 +148,7 @@ export default function RiderDashboard() {
       <div className="bg-slate-900 rounded-2xl p-5 text-white shadow-md flex items-center justify-between">
         <div>
           <p className="text-[10px] uppercase font-bold text-slate-400">Rider Hub</p>
-          <h2 className="text-xl font-black">John Rider</h2>
+          <h2 className="text-xl font-black">{user?.name || "Rider"}</h2>
           <p className="text-[10px] text-emerald-400 mt-1 flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             Duty Active • 4.9⭐ Rating

@@ -162,5 +162,19 @@ export const api = {
       method: 'POST'
     });
     return handleResponse(res);
+  },
+
+  async getPrices(): Promise<{ washFold: number; washDry: number; dryClean: number; ironing: number; }> {
+    const res = await fetch('/api/prices');
+    return handleResponse(res);
+  },
+
+  async updatePrices(data: { washFold: number; washDry: number; dryClean: number; ironing: number; }): Promise<{ success: boolean; prices: any }> {
+    const res = await fetch('/api/prices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return handleResponse(res);
   }
 };

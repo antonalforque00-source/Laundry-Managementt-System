@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api';
+import { useAuth } from '../App';
 import { Order, OrderStatus, STATUS_LABELS, InventoryItem } from '../types';
 import { 
   WashingMachine, ArrowRight, ClipboardCheck, AlertTriangle, 
@@ -7,6 +8,7 @@ import {
 } from 'lucide-react';
 
 export default function StaffDashboard() {
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +67,7 @@ export default function StaffDashboard() {
     if (next) {
       await api.updateOrder(order.id, { 
         status: next,
-        updatedBy: "Staff Maria"
+        updatedBy: user?.name || "Staff Maria"
       });
       loadData();
     }
@@ -89,7 +91,7 @@ export default function StaffDashboard() {
       weight: simulatedWeight,
       status: 'washing',
       specialInstructions: notes,
-      updatedBy: "Staff Maria"
+      updatedBy: user?.name || "Staff Maria"
     });
 
     setProcessingOrder(null);
@@ -115,7 +117,7 @@ export default function StaffDashboard() {
       <div className="bg-gradient-to-r from-[#0d9488] to-[#0f766e] rounded-2xl p-5 text-white shadow-md flex items-center justify-between">
         <div>
           <p className="text-[10px] uppercase font-bold text-teal-100">Hub Operations</p>
-          <h2 className="text-xl font-black">Maria Staff</h2>
+          <h2 className="text-xl font-black">{user?.name || "Maria Staff"}</h2>
           <p className="text-[10px] text-teal-50 mt-1 flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
             Station: Main Washing Hub B

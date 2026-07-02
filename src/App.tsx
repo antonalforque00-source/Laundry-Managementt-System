@@ -101,10 +101,26 @@ export const useAuth = () => {
   return context;
 };
 
+const normalizeStaffUser = (u: User | null): User | null => {
+  if (!u) return null;
+  if (u.role === 'staff' && u.name) {
+    const normalized = u.name.toLowerCase().trim().replace(/\s+/g, '');
+    if (normalized === 'rhexdelima' || normalized === 'rhex' || (u.email && (u.email.toLowerCase().includes('rhexdelima') || u.email.toLowerCase().includes('rhex.delima')))) {
+      return { ...u, name: 'Delima' };
+    }
+  }
+  return u;
+};
+
 export default function App() {
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('lpdms_user');
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    try {
+      return normalizeStaffUser(JSON.parse(saved));
+    } catch {
+      return null;
+    }
   });
 
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -306,8 +322,11 @@ export default function App() {
   }, [user]);
 
   const login = (u: User) => {
-    setUser(u);
-    localStorage.setItem('lpdms_user', JSON.stringify(u));
+    const sanitized = normalizeStaffUser(u);
+    if (sanitized) {
+      setUser(sanitized);
+      localStorage.setItem('lpdms_user', JSON.stringify(sanitized));
+    }
   };
   
   const logout = () => {

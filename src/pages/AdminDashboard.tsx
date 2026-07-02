@@ -16,6 +16,7 @@ export default function AdminDashboard() {
 
   // Active Admin Sub-Tab
   const [activeTab, setActiveTab] = useState<'analytics' | 'orders' | 'services' | 'users' | 'database'>('analytics');
+  const [showDatabaseTab, setShowDatabaseTab] = useState(false);
 
   // Pricing State
   const [prices, setPrices] = useState({
@@ -24,6 +25,17 @@ export default function AdminDashboard() {
     dryClean: 850,
     ironing: 300
   });
+
+  // Temporary string-based inputs for typing without instant saves and zero bugs
+  const [editPrices, setEditPrices] = useState({
+    washFold: '450',
+    washDry: '500',
+    dryClean: '850',
+    ironing: '300'
+  });
+
+  const [savingPriceKey, setSavingPriceKey] = useState<string | null>(null);
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string>('');
 
   // Database Connection / Configuration State
   const [dbConfig, setDbConfig] = useState<any>(null);
@@ -66,6 +78,15 @@ export default function AdminDashboard() {
       
       const allUsers = await api.getUsers();
       setUsers(allUsers);
+
+      const activePrices = await api.getPrices();
+      setPrices(activePrices);
+      setEditPrices({
+        washFold: String(activePrices.washFold ?? 450),
+        washDry: String(activePrices.washDry ?? 500),
+        dryClean: String(activePrices.dryClean ?? 850),
+        ironing: String(activePrices.ironing ?? 300)
+      });
     } catch (err) {
       console.error(err);
     } finally {
@@ -85,11 +106,18 @@ export default function AdminDashboard() {
     const selectedRider = users.find(u => u.id === riderId);
     if (!selectedRider) return;
 
-    await api.updateOrder(id, {
+    const orderToUpdate = orders.find(o => o.id === id);
+    const updates: any = {
       riderId,
       riderName: selectedRider.name,
       updatedBy: "Admin Boss"
-    });
+    };
+
+    if (orderToUpdate?.status === 'pending') {
+      updates.status = 'pickup_scheduled';
+    }
+
+    await api.updateOrder(id, updates);
     loadAdminData();
   };
 
@@ -102,8 +130,54 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUpdatePrice = (serviceKey: keyof typeof prices, val: string) => {
-    setPrices(prev => ({ ...prev, [serviceKey]: Number(val) }));
+  const handlePriceInputChange = (serviceKey: 'washFold' | 'washDry' | 'dryClean' | 'ironing', val: string) => {
+    // Strip leading zeros unless it's just '0' itself
+    let sanitized = val;
+    if (sanitized.length > 1 && sanitized.startsWith('0')) {
+      sanitized = sanitized.replace(/^0+/, '');
+    }
+    // Only allow positive integers
+    sanitized = sanitized.replace(/[^0-9]/g, '');
+
+    setEditPrices(prev => ({
+      ...prev,
+      [serviceKey]: sanitized
+    }));
+  };
+
+  const handleSaveSinglePrice = async (serviceKey: 'washFold' | 'washDry' | 'dryClean' | 'ironing') => {
+    setSavingPriceKey(serviceKey);
+    setSaveSuccessMessage('');
+    try {
+      const parsedVal = parseInt(editPrices[serviceKey], 10) || 0;
+      const updated = {
+        ...prices,
+        [serviceKey]: parsedVal
+      };
+
+      const res = await api.updatePrices(updated);
+      if (res.success) {
+        setPrices(updated);
+        // Sync back standard string format
+        setEditPrices(prev => ({
+          ...prev,
+          [serviceKey]: String(parsedVal)
+        }));
+        
+        const label = serviceKey === 'washFold' ? 'Wash & Fold' : 
+                      serviceKey === 'washDry' ? 'Wash & Dry' : 
+                      serviceKey === 'dryClean' ? 'Dry Cleaning' : 'Ironing';
+        setSaveSuccessMessage(`Successfully updated ${label} price to ₱${parsedVal}!`);
+        
+        setTimeout(() => {
+          setSaveSuccessMessage('');
+        }, 4000);
+      }
+    } catch (err) {
+      console.error("Failed to update price:", err);
+    } finally {
+      setSavingPriceKey(null);
+    }
   };
 
   const handleSaveDbConfig = async (e: React.FormEvent) => {
@@ -181,11 +255,21 @@ export default function AdminDashboard() {
       {/* Admin Title Banner */}
       <div className="flex items-center justify-between pb-1">
         <div>
-          <h2 className="text-lg font-black text-slate-900 leading-tight">Admin Overview</h2>
-          <p className="text-[10px] text-slate-400 mt-0.5">Global LPDMS System Controls</p>
+          <h2 
+            onDoubleClick={() => {
+              setShowDatabaseTab(prev => !prev);
+              if (activeTab === 'database') setActiveTab('analytics');
+            }}
+            className="text-lg font-black text-slate-900 leading-tight select-none cursor-default"
+          >
+            Admin Overview
+          </h2>
+          <p className="text-[10px] text-slate-400 mt-0.5">
+            Global LPDMS System Controls
+          </p>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-lg flex-wrap gap-1">
-          {(['analytics', 'orders', 'services', 'users', 'database'] as const).map(tab => (
+          {(showDatabaseTab ? (['analytics', 'orders', 'services', 'users', 'database'] as const) : (['analytics', 'orders', 'services', 'users'] as const)).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -353,45 +437,113 @@ export default function AdminDashboard() {
       )}
 
       {activeTab === 'services' && (
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <div className="border-b pb-2">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">Dynamic Pricing Config (SDG 9)</h3>
-            <p className="text-[10px] text-slate-400 mt-0.5">Control pricing ratios based on transport and energy resources</p>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4 animate-fade-in">
+          <div className="border-b pb-2 flex justify-between items-center">
+            <div>
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">Dynamic Pricing Config (SDG 9)</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Control pricing ratios based on transport and energy resources</p>
+            </div>
+            <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+              Active Connection
+            </span>
           </div>
 
-          <div className="space-y-3">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 mb-1">Wash & Fold Base Pricing (₱)</label>
-              <input 
-                type="number" 
-                value={prices.washFold} 
-                onChange={e => handleUpdatePrice('washFold', e.target.value)}
-                className="w-full text-xs p-2 border rounded-lg bg-slate-50"
-              />
+          {saveSuccessMessage && (
+            <div className="bg-emerald-50 text-emerald-800 text-[11px] p-2.5 rounded-lg border border-emerald-200 flex items-center gap-1.5 font-medium transition-all">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              {saveSuccessMessage}
             </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 mb-1">Wash & Dry Base Pricing (₱)</label>
-              <input 
-                type="number" 
-                value={prices.washDry} 
-                onChange={e => handleUpdatePrice('washDry', e.target.value)}
-                className="w-full text-xs p-2 border rounded-lg bg-slate-50"
-              />
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100 space-y-2">
+              <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">Wash & Fold Base Pricing (₱)</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  pattern="[0-9]*"
+                  value={editPrices.washFold} 
+                  onChange={e => handlePriceInputChange('washFold', e.target.value)}
+                  className="w-full text-xs p-2 border rounded-lg bg-white font-mono font-bold focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  placeholder="e.g. 450"
+                />
+                <button
+                  onClick={() => handleSaveSinglePrice('washFold')}
+                  disabled={savingPriceKey === 'washFold'}
+                  className="bg-[#0d9488] hover:bg-[#0f766e] text-white text-[10px] font-extrabold uppercase px-3 py-2 rounded-lg transition-all shrink-0 flex items-center justify-center min-w-[75px] disabled:opacity-50 cursor-pointer"
+                >
+                  {savingPriceKey === 'washFold' ? 'Saving...' : 'Change'}
+                </button>
+              </div>
             </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 mb-1">Dry Cleaning Premium Pricing (₱)</label>
-              <input 
-                type="number" 
-                value={prices.dryClean} 
-                onChange={e => handleUpdatePrice('dryClean', e.target.value)}
-                className="w-full text-xs p-2 border rounded-lg bg-slate-50"
-              />
+
+            <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100 space-y-2">
+              <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">Wash & Dry Base Pricing (₱)</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  pattern="[0-9]*"
+                  value={editPrices.washDry} 
+                  onChange={e => handlePriceInputChange('washDry', e.target.value)}
+                  className="w-full text-xs p-2 border rounded-lg bg-white font-mono font-bold focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  placeholder="e.g. 500"
+                />
+                <button
+                  onClick={() => handleSaveSinglePrice('washDry')}
+                  disabled={savingPriceKey === 'washDry'}
+                  className="bg-[#0d9488] hover:bg-[#0f766e] text-white text-[10px] font-extrabold uppercase px-3 py-2 rounded-lg transition-all shrink-0 flex items-center justify-center min-w-[75px] disabled:opacity-50 cursor-pointer"
+                >
+                  {savingPriceKey === 'washDry' ? 'Saving...' : 'Change'}
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100 space-y-2">
+              <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">Dry Cleaning Premium Pricing (₱)</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  pattern="[0-9]*"
+                  value={editPrices.dryClean} 
+                  onChange={e => handlePriceInputChange('dryClean', e.target.value)}
+                  className="w-full text-xs p-2 border rounded-lg bg-white font-mono font-bold focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  placeholder="e.g. 850"
+                />
+                <button
+                  onClick={() => handleSaveSinglePrice('dryClean')}
+                  disabled={savingPriceKey === 'dryClean'}
+                  className="bg-[#0d9488] hover:bg-[#0f766e] text-white text-[10px] font-extrabold uppercase px-3 py-2 rounded-lg transition-all shrink-0 flex items-center justify-center min-w-[75px] disabled:opacity-50 cursor-pointer"
+                >
+                  {savingPriceKey === 'dryClean' ? 'Saving...' : 'Change'}
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100 space-y-2">
+              <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">Ironing Premium Pricing (₱)</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  pattern="[0-9]*"
+                  value={editPrices.ironing} 
+                  onChange={e => handlePriceInputChange('ironing', e.target.value)}
+                  className="w-full text-xs p-2 border rounded-lg bg-white font-mono font-bold focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  placeholder="e.g. 300"
+                />
+                <button
+                  onClick={() => handleSaveSinglePrice('ironing')}
+                  disabled={savingPriceKey === 'ironing'}
+                  className="bg-[#0d9488] hover:bg-[#0f766e] text-white text-[10px] font-extrabold uppercase px-3 py-2 rounded-lg transition-all shrink-0 flex items-center justify-center min-w-[75px] disabled:opacity-50 cursor-pointer"
+                >
+                  {savingPriceKey === 'ironing' ? 'Saving...' : 'Change'}
+                </button>
+              </div>
             </div>
           </div>
 
           <div className="bg-emerald-50/70 p-3 rounded-lg border border-emerald-100">
-            <p className="text-[9px] text-emerald-800 leading-normal">
-              Changes apply instantly across newly generated bookings. Active campaigns and discount points are factored dynamically into customer book estimates.
+            <p className="text-[9px] text-emerald-800 leading-normal font-medium">
+              💡 Changes apply instantly. Customers booking their laundry will see the updated rates automatically displayed in their panel, calculated in real-time.
             </p>
           </div>
         </div>
@@ -628,7 +780,7 @@ export default function AdminDashboard() {
 
 CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
-  customer_id TEXT NOT NULL,
+  customer_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   customer_name TEXT NOT NULL,
   service TEXT NOT NULL,
   status TEXT NOT NULL,
@@ -641,7 +793,7 @@ CREATE TABLE IF NOT EXISTS orders (
   qr_code_value TEXT,
   address TEXT,
   phone TEXT,
-  rider_id TEXT,
+  rider_id TEXT REFERENCES users(id) ON DELETE SET NULL,
   rider_name TEXT,
   rating INTEGER,
   review TEXT

@@ -43,9 +43,27 @@ export default function CustomerDashboard() {
   const [ratingStars, setRatingStars] = useState(5);
   const [reviewText, setReviewText] = useState('');
 
+  // Dynamic Pricing State
+  const [dbPrices, setDbPrices] = useState({
+    washFold: 450,
+    washDry: 500,
+    dryClean: 850,
+    ironing: 300
+  });
+
   useEffect(() => {
     loadOrders();
+    loadDbPrices();
   }, [user]);
+
+  const loadDbPrices = async () => {
+    try {
+      const p = await api.getPrices();
+      setDbPrices(p);
+    } catch (err) {
+      console.error("Error loading prices:", err);
+    }
+  };
 
   const loadOrders = async () => {
     if (!user) return;
@@ -71,7 +89,14 @@ export default function CustomerDashboard() {
     e.preventDefault();
     if (!user) return;
 
-    const baseCost = service.includes('Wash & Fold') ? 450 : service.includes('Dry Cleaning') ? 850 : service.includes('Ironing') ? 300 : 500;
+    let baseCost = dbPrices.washFold;
+    if (service.includes('Dry Cleaning')) {
+      baseCost = dbPrices.dryClean;
+    } else if (service.includes('Ironing')) {
+      baseCost = dbPrices.ironing;
+    } else if (service.includes('Wash & Dry')) {
+      baseCost = dbPrices.washDry;
+    }
     
     const newOrder = await api.createOrder({
       customerId: user.id,

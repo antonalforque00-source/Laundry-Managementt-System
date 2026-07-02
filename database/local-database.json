@@ -1,0 +1,225 @@
+{
+  "users": [
+    {
+      "id": "cust-1",
+      "name": "Alice Smith",
+      "email": "alice@example.com",
+      "password": "password123",
+      "role": "customer",
+      "points": 150,
+      "address": "123 Taft Ave, Manila",
+      "phone": "+63 917 123 4567"
+    },
+    {
+      "id": "cust-2",
+      "name": "Bob Johnson",
+      "email": "bob@example.com",
+      "password": "password123",
+      "role": "customer",
+      "points": 40,
+      "address": "456 Katipunan Ave, Quezon City",
+      "phone": "+63 918 765 4321"
+    },
+    {
+      "id": "rider-1",
+      "name": "John Rider",
+      "email": "rider@example.com",
+      "password": "password123",
+      "role": "rider",
+      "rating": 4.9,
+      "status": "active",
+      "phone": "+63 919 111 2222"
+    },
+    {
+      "id": "staff-1",
+      "name": "Maria Staff",
+      "email": "staff@example.com",
+      "password": "password123",
+      "role": "staff",
+      "station": "Washing Hub B",
+      "phone": "+63 920 333 4444"
+    },
+    {
+      "id": "admin-1",
+      "name": "Admin Boss",
+      "email": "admin@example.com",
+      "password": "password123",
+      "role": "admin",
+      "phone": "+63 921 555 6666"
+    },
+    {
+      "id": "admin-222b75",
+      "name": "Anton Alforque",
+      "email": "Anton@yahoo.com",
+      "password": "123456",
+      "role": "admin",
+      "points": 0,
+      "address": "",
+      "phone": "09856325154"
+    },
+    {
+      "id": "staff-b61c6c",
+      "name": "RhexDelima",
+      "email": "delima@yahoo.com",
+      "password": "123456",
+      "role": "staff",
+      "points": 0,
+      "address": "",
+      "phone": "0985632651"
+    },
+    {
+      "id": "rider-ea754a",
+      "name": "CidricSanchez",
+      "email": "sanchez@yahoo.com",
+      "password": "123456",
+      "role": "rider",
+      "points": 0,
+      "address": "",
+      "phone": "0985636524"
+    },
+    {
+      "id": "cust-a83040",
+      "name": "ClarckBaynas",
+      "email": "baynas@yahoo.com",
+      "password": "123456",
+      "role": "customer",
+      "points": 0,
+      "address": "",
+      "phone": "09856326587"
+    }
+  ],
+  "orders": [
+    {
+      "id": "LPD-1024",
+      "customerId": "cust-1",
+      "customerName": "Alice Smith",
+      "service": "Wash & Fold",
+      "status": "washing",
+      "cost": 450,
+      "weight": 5.2,
+      "createdAt": "2026-07-02T07:12:51.874Z",
+      "specialInstructions": "Use gentle lavender detergent",
+      "paymentMethod": "GCash",
+      "isPaid": true,
+      "qrCodeValue": "QR_LPD-1024",
+      "address": "123 Taft Ave, Manila",
+      "phone": "+63 917 123 4567",
+      "riderId": "rider-1",
+      "riderName": "John Rider",
+      "rating": 5,
+      "review": "Incredible quick service!"
+    },
+    {
+      "id": "LPD-1025",
+      "customerId": "cust-2",
+      "customerName": "Bob Johnson",
+      "service": "Dry Cleaning",
+      "status": "pickup_scheduled",
+      "cost": 850,
+      "weight": 0,
+      "createdAt": "2026-07-02T11:12:51.874Z",
+      "specialInstructions": "Suit jacket needs extra care",
+      "paymentMethod": "Maya",
+      "isPaid": false,
+      "qrCodeValue": "QR_LPD-1025",
+      "address": "456 Katipunan Ave, Quezon City",
+      "phone": "+63 918 765 4321",
+      "riderId": "rider-1",
+      "riderName": "John Rider"
+    },
+    {
+      "id": "LPD-6061",
+      "weight": 0,
+      "status": "pending",
+      "createdAt": "2026-07-02T12:59:12.718Z",
+      "qrCodeValue": "QR_LPD-6061",
+      "customerId": "cust-a83040",
+      "customerName": "ClarckBaynas",
+      "service": "Wash & Fold",
+      "cost": 450,
+      "specialInstructions": "Tarunga amping",
+      "paymentMethod": "Cash on Delivery",
+      "isPaid": false,
+      "address": "123 Main St",
+      "phone": "09856326587"
+    },
+    {
+      "id": "LPD-7312",
+      "weight": 0,
+      "status": "pending",
+      "createdAt": "2026-07-02T12:59:37.517Z",
+      "qrCodeValue": "QR_LPD-7312",
+      "customerId": "cust-a83040",
+      "customerName": "ClarckBaynas",
+      "service": "Wash & Fold",
+      "cost": 450,
+      "specialInstructions": "Iloveyou hehe",
+      "paymentMethod": "Cash on Delivery",
+      "isPaid": false,
+      "address": "123 Main St",
+      "phone": "09856326587"
+    }
+  ],
+  "inventory": [
+    {
+      "id": "inv-1",
+      "name": "Premium Liquid Detergent",
+      "quantity": 18.5,
+      "unit": "L",
+      "minLimit": 5
+    },
+    {
+      "id": "inv-2",
+      "name": "Organic Fabric Conditioner",
+      "quantity": 4.2,
+      "unit": "L",
+      "minLimit": 5
+    },
+    {
+      "id": "inv-3",
+      "name": "Eco Bleach & Stain Remover",
+      "quantity": 12,
+      "unit": "L",
+      "minLimit": 3
+    },
+    {
+      "id": "inv-4",
+      "name": "Biodegradable Laundry Bags",
+      "quantity": 120,
+      "unit": "pcs",
+      "minLimit": 50
+    }
+  ],
+  "auditLogs": [
+    {
+      "timestamp": "2026-07-02T09:12:51.874Z",
+      "user": "Maria Staff",
+      "action": "Updated LPD-1024 to 'Washing'"
+    },
+    {
+      "timestamp": "2026-07-02T08:12:51.874Z",
+      "user": "John Rider",
+      "action": "Picked up LPD-1024 laundry bag"
+    },
+    {
+      "timestamp": "2026-07-02T07:12:51.874Z",
+      "user": "Alice Smith",
+      "action": "Created booking LPD-1024"
+    }
+  ],
+  "feedbacks": [
+    {
+      "id": "fb-1",
+      "customerName": "Alice Smith",
+      "rating": 5,
+      "review": "Smells wonderful and neatly folded!",
+      "type": "Review"
+    }
+  ],
+  "prices": {
+    "washFold": 450,
+    "washDry": 500,
+    "dryClean": 850,
+    "ironing": 300
+  }
+}

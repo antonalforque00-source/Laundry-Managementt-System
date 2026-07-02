@@ -131,38 +131,6 @@ export default function Login() {
         {/* Subtle top brand accent line */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-teal-500 to-cyan-500" />
 
-        {/* Connection status badge positioned in the top right corner */}
-        {dbConfig && (
-          <div className="absolute top-4 right-4 z-10">
-            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
-              dbConfig.useSupabase && dbConfig.tablesExist
-                ? dbConfig.rlsActive
-                  ? 'bg-amber-50 text-amber-600 border border-amber-200'
-                  : 'bg-[#f0fdfa] text-[#0d9488] border border-teal-100'
-                : dbConfig.useSupabase
-                  ? 'bg-amber-50 text-amber-600 border border-amber-100'
-                  : 'bg-slate-50 text-slate-500 border border-slate-100'
-            }`}>
-              <span className={`inline-block w-1.5 h-1.5 rounded-full ${
-                dbConfig.useSupabase && dbConfig.tablesExist
-                  ? dbConfig.rlsActive
-                    ? 'bg-amber-500 animate-pulse'
-                    : 'bg-[#0d9488] animate-pulse'
-                  : dbConfig.useSupabase
-                    ? 'bg-amber-500 animate-pulse'
-                    : 'bg-slate-400'
-              }`} />
-              {dbConfig.useSupabase && dbConfig.tablesExist
-                ? dbConfig.rlsActive
-                  ? 'Active (RLS Locked)'
-                  : 'Active'
-                : dbConfig.useSupabase
-                  ? 'Local Fallback'
-                  : 'Active (Local)'}
-            </span>
-          </div>
-        )}
-
         {/* 1. WELCOME SCREEN */}
         {step === 'welcome' && (
           <div className="flex flex-col h-full animate-fade-in">
@@ -244,113 +212,8 @@ export default function Login() {
                 </div>
 
                 {error && (
-                  <div className="space-y-2 mb-4">
-                    <div className="bg-rose-50 text-rose-600 text-[11px] p-3 rounded-2xl font-medium border border-rose-100 leading-normal">
-                      {error}
-                    </div>
-                    
-                    {/* Database RLS Handler panel */}
-                    {(error.includes("Row-Level Security") || error.includes("RLS") || error.includes("addUser") || error.includes("42501")) && (
-                      <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-3 text-[10px] space-y-2">
-                        <p className="font-extrabold flex items-center gap-1">
-                          <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping" />
-                          Quick Database Fix (RLS Blocked)
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(`ALTER TABLE users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
-ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`);
-                            setRlsCopied(true);
-                            setTimeout(() => setRlsCopied(false), 2000);
-                          }}
-                          className="w-full bg-amber-650 hover:bg-amber-750 text-white py-1.5 px-2 rounded-xl text-[9px] font-bold tracking-wide transition-all shadow-xs flex items-center justify-center gap-1"
-                        >
-                          {rlsCopied ? "✓ SQL Copied!" : "Copy SQL Code to Disable RLS"}
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Database Schema Handler panel */}
-                    {(error.includes("Table Missing") || error.includes("42P01") || error.includes("relation") || error.includes("does not exist")) && (
-                      <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-2xl p-3 text-[10px] space-y-2">
-                        <p className="font-extrabold flex items-center gap-1 text-blue-900">
-                          <span className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                          Quick Database Fix (Missing Tables)
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(`CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL UNIQUE,
-  password TEXT NOT NULL,
-  role TEXT NOT NULL,
-  points INTEGER DEFAULT 0,
-  address TEXT,
-  phone TEXT,
-  rating NUMERIC DEFAULT 0,
-  status TEXT,
-  station TEXT
-);
-CREATE TABLE IF NOT EXISTS orders (
-  id TEXT PRIMARY KEY,
-  customer_id TEXT NOT NULL,
-  customer_name TEXT NOT NULL,
-  service TEXT NOT NULL,
-  status TEXT NOT NULL,
-  cost NUMERIC DEFAULT 0,
-  weight NUMERIC DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  special_instructions TEXT,
-  payment_method TEXT,
-  is_paid BOOLEAN DEFAULT FALSE,
-  qr_code_value TEXT,
-  address TEXT,
-  phone TEXT,
-  rider_id TEXT,
-  rider_name TEXT,
-  rating INTEGER,
-  review TEXT
-);
-CREATE TABLE IF NOT EXISTS inventory (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  quantity NUMERIC NOT NULL DEFAULT 0,
-  unit TEXT NOT NULL,
-  min_limit NUMERIC NOT NULL DEFAULT 0
-);
-CREATE TABLE IF NOT EXISTS audit_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timestamp TIMESTAMPTZ DEFAULT NOW(),
-  user_name TEXT NOT NULL,
-  action TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS feedbacks (
-  id TEXT PRIMARY KEY,
-  customer_name TEXT NOT NULL,
-  rating INTEGER NOT NULL,
-  review TEXT,
-  type TEXT NOT NULL DEFAULT 'Review'
-);
-ALTER TABLE users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
-ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`);
-                            setSchemaCopied(true);
-                            setTimeout(() => setSchemaCopied(false), 2000);
-                          }}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2 rounded-xl text-[9px] font-bold tracking-wide transition-all shadow-xs flex items-center justify-center gap-1"
-                        >
-                          {schemaCopied ? "✓ Schema SQL Copied!" : "Copy Full SQL Table Schema"}
-                        </button>
-                      </div>
-                    )}
+                  <div className="mb-4 bg-rose-50 text-rose-600 text-[11px] p-3 rounded-2xl font-medium border border-rose-100 leading-normal">
+                    {error}
                   </div>
                 )}
 
@@ -458,33 +321,6 @@ ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`);
                 {success && (
                   <div className="bg-emerald-50 text-emerald-600 text-[11px] p-2.5 rounded-2xl font-medium mb-4 border border-emerald-100">
                     {success}
-                  </div>
-                )}
-
-                {dbConfig?.rlsActive && (
-                  <div className="bg-amber-50/70 border border-amber-200 text-amber-800 rounded-2xl p-3 text-[10px] space-y-2 mb-4 leading-normal">
-                    <p className="font-extrabold flex items-center gap-1.5 text-amber-900">
-                      <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping" />
-                      Database is Active, but RLS is locked in Supabase
-                    </p>
-                    <p className="text-slate-600">
-                      Your registrations and bookings will succeed automatically using local fallback! To save directly to your Supabase tables, copy and run this in your Supabase SQL Editor:
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(`ALTER TABLE users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
-ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`);
-                        setRlsCopied(true);
-                        setTimeout(() => setRlsCopied(false), 2000);
-                      }}
-                      className="w-full bg-amber-600 hover:bg-amber-700 text-white py-1.5 px-2 rounded-xl text-[9px] font-bold tracking-wide transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      {rlsCopied ? "✓ SQL Code Copied!" : "Copy SQL to Disable RLS on Supabase"}
-                    </button>
                   </div>
                 )}
 

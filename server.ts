@@ -76,8 +76,15 @@ let feedbacks = [
   { id: "fb-1", customerName: "Alice Smith", rating: 5, review: "Smells wonderful and neatly folded!", type: "Review" }
 ];
 
+let prices = {
+  washFold: 450,
+  washDry: 500,
+  dryClean: 850,
+  ironing: 300
+};
+
 // --- Local File Database Persistence ---
-const LOCAL_DB_PATH = path.join(process.cwd(), "local-database.json");
+const LOCAL_DB_PATH = path.join(process.cwd(), "database", "local-database.json");
 
 function loadLocalDb() {
   if (fs.existsSync(LOCAL_DB_PATH)) {
@@ -88,6 +95,7 @@ function loadLocalDb() {
       if (data.inventory && Array.isArray(data.inventory)) inventory = data.inventory;
       if (data.auditLogs && Array.isArray(data.auditLogs)) auditLogs = data.auditLogs;
       if (data.feedbacks && Array.isArray(data.feedbacks)) feedbacks = data.feedbacks;
+      if (data.prices) prices = { ...prices, ...data.prices };
       console.log("Loaded persistent JSON-file-based database successfully.");
     } catch (err) {
       console.error("Error loading local-database.json:", err);
@@ -101,7 +109,7 @@ function saveLocalDb() {
   try {
     fs.writeFileSync(
       LOCAL_DB_PATH,
-      JSON.stringify({ users, orders, inventory, auditLogs, feedbacks }, null, 2),
+      JSON.stringify({ users, orders, inventory, auditLogs, feedbacks, prices }, null, 2),
       "utf8"
     );
   } catch (err) {
@@ -627,10 +635,19 @@ async function startServer() {
   app.post("/api/auth/login", async (req, res) => {
     const { email, password } = req.body;
     try {
-      const user = await dbFindUserByEmail(email);
+      let user = await dbFindUserByEmail(email);
       if (!user || user.password !== password) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
+      
+      // Auto-normalize name for staff if matches rhex delima variations
+      if (user.role === "staff" && user.name) {
+        const normalized = user.name.toLowerCase().trim().replace(/\s+/g, '');
+        if (normalized === "rhexdelima" || normalized === "rhex" || user.email.toLowerCase().includes("rhexdelima") || user.email.toLowerCase().includes("rhex.delima")) {
+          user.name = "Delima";
+        }
+      }
+
       // Log activity
       await dbAddAuditLog(user.name, "Logged into LPDMS");
       res.json(user);
@@ -640,12 +657,21 @@ async function startServer() {
   });
 
   app.post("/api/auth/register", async (req, res) => {
-    const { name, email, password, role, address, phone } = req.body;
+    let { name, email, password, role, address, phone } = req.body;
     try {
       const existing = await dbFindUserByEmail(email);
       if (existing) {
         return res.status(400).json({ error: "Email already exists" });
       }
+      
+      // Auto-normalize name for staff registration if matches rhex delima variations
+      if (role === "staff" && name) {
+        const normalized = name.toLowerCase().trim().replace(/\s+/g, '');
+        if (normalized === "rhexdelima" || normalized === "rhex" || email.toLowerCase().includes("rhexdelima") || email.toLowerCase().includes("rhex.delima")) {
+          name = "Delima";
+        }
+      }
+
       const prefix = role === "rider" ? "rider" : role === "staff" ? "staff" : role === "admin" ? "admin" : "cust";
       const newUser = {
         id: `${prefix}-${randomUUID().slice(0, 6)}`,
@@ -669,7 +695,17 @@ async function startServer() {
   app.get("/api/users", async (req, res) => {
     try {
       const allUsers = await dbGetUsers();
-      res.json(allUsers.map(({ password, ...u }: any) => u));
+      const sanitized = allUsers.map(({ password, ...u }: any) => {
+        // Auto-normalize name for staff list
+        if (u.role === "staff" && u.name) {
+          const normalized = u.name.toLowerCase().trim().replace(/\s+/g, '');
+          if (normalized === "rhexdelima" || normalized === "rhex" || (u.email && (u.email.toLowerCase().includes("rhexdelima") || u.email.toLowerCase().includes("rhex.delima")))) {
+            u.name = "Delima";
+          }
+        }
+        return u;
+      });
+      res.json(sanitized);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -814,6 +850,29 @@ async function startServer() {
         return res.json(item);
       }
       res.status(404).json({ error: "Item not found" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Dynamic Prices APIs
+  app.get("/api/prices", (req, res) => {
+    res.json(prices);
+  });
+
+  app.post("/api/prices", (req, res) => {
+    try {
+      const data = req.body;
+      if (data) {
+        prices.washFold = Number(data.washFold) || 450;
+        prices.washDry = Number(data.washDry) || 500;
+        prices.dryClean = Number(data.dryClean) || 850;
+        prices.ironing = Number(data.ironing) || 300;
+        saveLocalDb();
+        res.json({ success: true, prices });
+      } else {
+        res.status(400).json({ error: "No pricing data provided" });
+      }
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

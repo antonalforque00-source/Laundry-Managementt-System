@@ -13,79 +13,204 @@ import {
   Database, Key, Copy, ChevronDown, ChevronUp, ExternalLink, Eye, EyeOff, CheckSquare, AlertTriangle
 } from 'lucide-react';
 
-const sqlSchemaText = `-- ==========================================
--- SUPABASE POSTGRESQL SCHEMA FOR LPDMS
--- ==========================================
+const sqlSchemaText = `-- ============================================================
+-- Laundry Pickup & Delivery Management System (LPDMS)
+-- Supabase PostgreSQL Schema
+-- TEXT Primary Keys Version
+-- ============================================================
 
--- 1. Create Users Table
-CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL UNIQUE,
-  password TEXT NOT NULL,
-  role TEXT NOT NULL,
-  points INTEGER DEFAULT 0,
-  address TEXT,
-  phone TEXT,
-  rating NUMERIC DEFAULT 0,
-  status TEXT,
-  station TEXT
+-- ===========================
+-- DROP OLD TABLES (Optional)
+-- ===========================
+
+DROP TABLE IF EXISTS feedbacks CASCADE;
+DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS inventory CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+-- ============================================================
+-- USERS
+-- ============================================================
+
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (
+        role IN ('customer','rider','staff','admin')
+    ),
+    points INTEGER DEFAULT 0,
+    address TEXT,
+    phone TEXT,
+    rating NUMERIC DEFAULT 0,
+    status TEXT,
+    station TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Create Orders Table
-CREATE TABLE IF NOT EXISTS orders (
-  id TEXT PRIMARY KEY,
-  customer_id TEXT NOT NULL,
-  customer_name TEXT NOT NULL,
-  service TEXT NOT NULL,
-  status TEXT NOT NULL,
-  cost NUMERIC DEFAULT 0,
-  weight NUMERIC DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  special_instructions TEXT,
-  payment_method TEXT,
-  is_paid BOOLEAN DEFAULT FALSE,
-  qr_code_value TEXT,
-  address TEXT,
-  phone TEXT,
-  rider_id TEXT,
-  rider_name TEXT,
-  rating INTEGER,
-  review TEXT
+-- ============================================================
+-- ORDERS
+-- ============================================================
+
+CREATE TABLE orders (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT NOT NULL,
+    rider_id TEXT,
+    customer_name TEXT,
+    rider_name TEXT,
+    service TEXT NOT NULL,
+    status TEXT DEFAULT 'Pending',
+    cost NUMERIC DEFAULT 0,
+    weight NUMERIC DEFAULT 0,
+    payment_method TEXT,
+    is_paid BOOLEAN DEFAULT FALSE,
+    special_instructions TEXT,
+    qr_code_value TEXT,
+    address TEXT,
+    phone TEXT,
+    rating INTEGER,
+    review TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT fk_customer
+        FOREIGN KEY (customer_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_rider
+        FOREIGN KEY (rider_id)
+        REFERENCES users(id)
+        ON DELETE SET NULL
 );
 
--- 3. Create Inventory Table
-CREATE TABLE IF NOT EXISTS inventory (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  quantity NUMERIC NOT NULL DEFAULT 0,
-  unit TEXT NOT NULL,
-  min_limit NUMERIC NOT NULL DEFAULT 0
+-- ============================================================
+-- INVENTORY
+-- ============================================================
+
+CREATE TABLE inventory (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    quantity NUMERIC DEFAULT 0,
+    unit TEXT NOT NULL,
+    min_limit NUMERIC DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Create Audit Logs Table
-CREATE TABLE IF NOT EXISTS audit_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timestamp TIMESTAMPTZ DEFAULT NOW(),
-  user_name TEXT NOT NULL,
-  action TEXT NOT NULL
+-- ============================================================
+-- AUDIT LOGS
+-- ============================================================
+
+CREATE TABLE audit_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT,
+    user_name TEXT,
+    action TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT fk_audit_user
+        FOREIGN KEY(user_id)
+        REFERENCES users(id)
+        ON DELETE SET NULL
 );
 
--- 5. Create Feedbacks Table
-CREATE TABLE IF NOT EXISTS feedbacks (
-  id TEXT PRIMARY KEY,
-  customer_name TEXT NOT NULL,
-  rating INTEGER NOT NULL,
-  review TEXT,
-  type TEXT NOT NULL DEFAULT 'Review'
+-- ============================================================
+-- FEEDBACKS
+-- ============================================================
+
+CREATE TABLE feedbacks (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT,
+    order_id TEXT,
+    customer_name TEXT,
+    rating INTEGER NOT NULL,
+    review TEXT,
+    type TEXT DEFAULT 'Review',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT fk_feedback_customer
+        FOREIGN KEY(customer_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_feedback_order
+        FOREIGN KEY(order_id)
+        REFERENCES orders(id)
+        ON DELETE CASCADE
 );
 
--- 6. Disable Row Level Security (RLS) on all tables to allow connection
+-- ============================================================
+-- INDEXES
+-- ============================================================
+
+CREATE INDEX idx_users_email
+ON users(email);
+
+CREATE INDEX idx_orders_customer
+ON orders(customer_id);
+
+CREATE INDEX idx_orders_rider
+ON orders(rider_id);
+
+CREATE INDEX idx_feedback_customer
+ON feedbacks(customer_id);
+
+CREATE INDEX idx_feedback_order
+ON feedbacks(order_id);
+
+CREATE INDEX idx_audit_user
+ON audit_logs(user_id);
+
+-- ============================================================
+-- UPDATE TIMESTAMP FUNCTION
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+NEW.updated_at = NOW();
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================
+-- TRIGGERS
+-- ============================================================
+
+CREATE TRIGGER trg_users_updated
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_orders_updated
+BEFORE UPDATE ON orders
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_inventory_updated
+BEFORE UPDATE ON inventory
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================
+-- DISABLE RLS
+-- ============================================================
+
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`;
+ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;
+
+-- ============================================================
+-- GRANT ACCESS
+-- ============================================================
+
+GRANT ALL ON TABLE users TO anon, authenticated;
+GRANT ALL ON TABLE orders TO anon, authenticated;
+GRANT ALL ON TABLE inventory TO anon, authenticated;
+GRANT ALL ON TABLE audit_logs TO anon, authenticated;
+GRANT ALL ON TABLE feedbacks TO anon, authenticated;
+`;
 
 interface AuthContextType {
   user: User | null;
@@ -383,10 +508,10 @@ export default function App() {
           {/* Main Workspace Layout */}
           <main className="flex-1 w-full flex flex-col relative z-10">
             <Routes>
-              <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+              <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
               
               <Route path="/" element={
-                !user ? <Navigate to="/login" /> :
+                !user ? <Navigate to="/login?step=login" replace /> :
                 <div className="max-w-6xl w-full mx-auto p-4 md:p-6 flex-1 flex flex-col justify-start">
                   <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-xs border border-slate-150 p-5 md:p-8 flex-1 flex flex-col relative overflow-hidden">
                     {user.role === 'customer' ? <CustomerDashboard /> :

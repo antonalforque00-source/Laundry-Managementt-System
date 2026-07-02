@@ -505,12 +505,12 @@ async function dbRefillInventory(id: string, amount: number) {
 async function dbGetAuditLogs() {
   if (supabaseClient && tablesExist) {
     try {
-      const { data, error } = await supabaseClient.from("audit_logs").select("*").order("timestamp", { ascending: false }).limit(40);
+      const { data, error } = await supabaseClient.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(40);
       if (error) {
         throw handleSupabaseError("getAuditLogs", error);
       }
       return (data || []).map(row => ({
-        timestamp: row.timestamp,
+        timestamp: row.created_at,
         user: row.user_name,
         action: row.action
       }));
@@ -534,7 +534,12 @@ async function dbAddAuditLog(userName: string, action: string) {
   };
   if (supabaseClient && tablesExist) {
     try {
-      const dbLog = toSnake(logObj);
+      const dbLog = {
+        id: randomUUID(),
+        created_at: logObj.timestamp,
+        user_name: logObj.userName,
+        action: logObj.action
+      };
       const { error } = await supabaseClient.from("audit_logs").insert([dbLog]);
       if (error) {
         console.error("Supabase addAuditLog error:", error);
@@ -1021,9 +1026,10 @@ async function startServer() {
       }
 
       // 5. Seed Logs
-      const snakeLogs = auditLogs.map(l => toSnake({
-        timestamp: l.timestamp,
-        userName: l.user,
+      const snakeLogs = auditLogs.map(l => ({
+        id: randomUUID(),
+        created_at: l.timestamp,
+        user_name: l.user,
         action: l.action
       }));
       for (const log of snakeLogs) {

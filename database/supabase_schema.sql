@@ -1,130 +1,211 @@
--- ====================================================================
--- SUPABASE POSTGRESQL SCHEMA FOR LPDMS (Laundry Pickup & Delivery Management System)
--- ====================================================================
--- Copy and run this script directly in your Supabase SQL Editor to create all required tables.
+-- ============================================================
+-- Laundry Pickup & Delivery Management System (LPDMS)
+-- Supabase PostgreSQL Schema
+-- TEXT Primary Keys Version
+-- ============================================================
 
--- 1. Create Users Table
-CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL UNIQUE,
-  password TEXT NOT NULL,
-  role TEXT NOT NULL, -- 'customer', 'rider', 'staff', 'admin'
-  points INTEGER DEFAULT 0,
-  address TEXT,
-  phone TEXT,
-  rating NUMERIC DEFAULT 0,
-  status TEXT, -- for riders: 'active', 'offline', etc.
-  station TEXT -- for laundry staff: 'Washing Hub A', etc.
+-- ===========================
+-- DROP OLD TABLES (Optional)
+-- ===========================
+
+DROP TABLE IF EXISTS feedbacks CASCADE;
+DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS inventory CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+-- ============================================================
+-- USERS
+-- ============================================================
+
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (
+        role IN ('customer','rider','staff','admin')
+    ),
+    points INTEGER DEFAULT 0,
+    address TEXT,
+    phone TEXT,
+    rating NUMERIC DEFAULT 0,
+    status TEXT,
+    station TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Create Orders Table
-CREATE TABLE IF NOT EXISTS orders (
-  id TEXT PRIMARY KEY,
-  customer_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  customer_name TEXT NOT NULL,
-  service TEXT NOT NULL,
-  status TEXT NOT NULL, -- 'pending', 'pickup_scheduled', 'received', 'washing', 'ready', 'delivered'
-  cost NUMERIC DEFAULT 0,
-  weight NUMERIC DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  special_instructions TEXT,
-  payment_method TEXT,
-  is_paid BOOLEAN DEFAULT FALSE,
-  qr_code_value TEXT,
-  address TEXT,
-  phone TEXT,
-  rider_id TEXT REFERENCES users(id) ON DELETE SET NULL,
-  rider_name TEXT,
-  rating INTEGER,
-  review TEXT
+-- ============================================================
+-- ORDERS
+-- ============================================================
+
+CREATE TABLE orders (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT NOT NULL,
+    rider_id TEXT,
+    customer_name TEXT,
+    rider_name TEXT,
+    service TEXT NOT NULL,
+    status TEXT DEFAULT 'Pending',
+    cost NUMERIC DEFAULT 0,
+    weight NUMERIC DEFAULT 0,
+    payment_method TEXT,
+    is_paid BOOLEAN DEFAULT FALSE,
+    special_instructions TEXT,
+    qr_code_value TEXT,
+    address TEXT,
+    phone TEXT,
+    rating INTEGER,
+    review TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT fk_customer
+        FOREIGN KEY (customer_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_rider
+        FOREIGN KEY (rider_id)
+        REFERENCES users(id)
+        ON DELETE SET NULL
 );
 
--- 3. Create Inventory Table
-CREATE TABLE IF NOT EXISTS inventory (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  quantity NUMERIC NOT NULL DEFAULT 0,
-  unit TEXT NOT NULL, -- 'L', 'pcs', etc.
-  min_limit NUMERIC NOT NULL DEFAULT 0
+-- ============================================================
+-- INVENTORY
+-- ============================================================
+
+CREATE TABLE inventory (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    quantity NUMERIC DEFAULT 0,
+    unit TEXT NOT NULL,
+    min_limit NUMERIC DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Create Audit Logs Table
-CREATE TABLE IF NOT EXISTS audit_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timestamp TIMESTAMPTZ DEFAULT NOW(),
-  user_name TEXT NOT NULL,
-  action TEXT NOT NULL
+-- ============================================================
+-- AUDIT LOGS
+-- ============================================================
+
+CREATE TABLE audit_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT,
+    user_name TEXT,
+    action TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT fk_audit_user
+        FOREIGN KEY(user_id)
+        REFERENCES users(id)
+        ON DELETE SET NULL
 );
 
--- 5. Create Feedbacks Table
-CREATE TABLE IF NOT EXISTS feedbacks (
-  id TEXT PRIMARY KEY,
-  customer_name TEXT NOT NULL,
-  rating INTEGER NOT NULL,
-  review TEXT,
-  type TEXT NOT NULL DEFAULT 'Review'
+-- ============================================================
+-- FEEDBACKS
+-- ============================================================
+
+CREATE TABLE feedbacks (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT,
+    order_id TEXT,
+    customer_name TEXT,
+    rating INTEGER NOT NULL,
+    review TEXT,
+    type TEXT DEFAULT 'Review',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT fk_feedback_customer
+        FOREIGN KEY(customer_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_feedback_order
+        FOREIGN KEY(order_id)
+        REFERENCES orders(id)
+        ON DELETE CASCADE
 );
 
--- Ensure table-level access is ready for public requests (Supabase default setup)
--- This disables Row-Level Security (RLS) altogether to allow direct, instant connections
+-- ============================================================
+-- INDEXES
+-- ============================================================
+
+CREATE INDEX idx_users_email
+ON users(email);
+
+CREATE INDEX idx_orders_customer
+ON orders(customer_id);
+
+CREATE INDEX idx_orders_rider
+ON orders(rider_id);
+
+CREATE INDEX idx_feedback_customer
+ON feedbacks(customer_id);
+
+CREATE INDEX idx_feedback_order
+ON feedbacks(order_id);
+
+CREATE INDEX idx_audit_user
+ON audit_logs(user_id);
+
+-- ============================================================
+-- UPDATE TIMESTAMP FUNCTION
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+NEW.updated_at = NOW();
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================
+-- TRIGGERS
+-- ============================================================
+
+CREATE TRIGGER trg_users_updated
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_orders_updated
+BEFORE UPDATE ON orders
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trg_inventory_updated
+BEFORE UPDATE ON inventory
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================
+-- DISABLE RLS
+-- ============================================================
+
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;
 
--- DOUBLE FAIL-SAFE: Create permissive public access policies just in case RLS remains active
--- 1. Users Policies
-DROP POLICY IF EXISTS "Allow public select on users" ON users;
-CREATE POLICY "Allow public select on users" ON users FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Allow public insert on users" ON users;
-CREATE POLICY "Allow public insert on users" ON users FOR INSERT WITH CHECK (true);
-DROP POLICY IF EXISTS "Allow public update on users" ON users;
-CREATE POLICY "Allow public update on users" ON users FOR UPDATE USING (true);
-DROP POLICY IF EXISTS "Allow public delete on users" ON users;
-CREATE POLICY "Allow public delete on users" ON users FOR DELETE USING (true);
+-- ============================================================
+-- GRANT ACCESS
+-- ============================================================
 
--- 2. Orders Policies
-DROP POLICY IF EXISTS "Allow public select on orders" ON orders;
-CREATE POLICY "Allow public select on orders" ON orders FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Allow public insert on orders" ON orders;
-CREATE POLICY "Allow public insert on orders" ON orders FOR INSERT WITH CHECK (true);
-DROP POLICY IF EXISTS "Allow public update on orders" ON orders;
-CREATE POLICY "Allow public update on orders" ON orders FOR UPDATE USING (true);
-DROP POLICY IF EXISTS "Allow public delete on orders" ON orders;
-CREATE POLICY "Allow public delete on orders" ON orders FOR DELETE USING (true);
+GRANT ALL ON TABLE users TO anon, authenticated;
+GRANT ALL ON TABLE orders TO anon, authenticated;
+GRANT ALL ON TABLE inventory TO anon, authenticated;
+GRANT ALL ON TABLE audit_logs TO anon, authenticated;
+GRANT ALL ON TABLE feedbacks TO anon, authenticated;
 
--- 3. Inventory Policies
-DROP POLICY IF EXISTS "Allow public select on inventory" ON inventory;
-CREATE POLICY "Allow public select on inventory" ON inventory FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Allow public insert on inventory" ON inventory;
-CREATE POLICY "Allow public insert on inventory" ON inventory FOR INSERT WITH CHECK (true);
-DROP POLICY IF EXISTS "Allow public update on inventory" ON inventory;
-CREATE POLICY "Allow public update on inventory" ON inventory FOR UPDATE USING (true);
-DROP POLICY IF EXISTS "Allow public delete on inventory" ON inventory;
-CREATE POLICY "Allow public delete on inventory" ON inventory FOR DELETE USING (true);
+-- ============================================================
+-- RELATIONSHIPS
+-- ============================================================
 
--- 4. Audit Logs Policies
-DROP POLICY IF EXISTS "Allow public select on audit_logs" ON audit_logs;
-CREATE POLICY "Allow public select on audit_logs" ON audit_logs FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Allow public insert on audit_logs" ON audit_logs;
-CREATE POLICY "Allow public insert on audit_logs" ON audit_logs FOR INSERT WITH CHECK (true);
+-- users.id ---------> orders.customer_id
+-- users.id ---------> orders.rider_id
+-- users.id ---------> audit_logs.user_id
+-- users.id ---------> feedbacks.customer_id
+-- orders.id --------> feedbacks.order_id
 
--- 5. Feedbacks Policies
-DROP POLICY IF EXISTS "Allow public select on feedbacks" ON feedbacks;
-CREATE POLICY "Allow public select on feedbacks" ON feedbacks FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Allow public insert on feedbacks" ON feedbacks;
-CREATE POLICY "Allow public insert on feedbacks" ON feedbacks FOR INSERT WITH CHECK (true);
-DROP POLICY IF EXISTS "Allow public update on feedbacks" ON feedbacks;
-CREATE POLICY "Allow public update on feedbacks" ON feedbacks FOR UPDATE USING (true);
-DROP POLICY IF EXISTS "Allow public delete on feedbacks" ON feedbacks;
-CREATE POLICY "Allow public delete on feedbacks" ON feedbacks FOR DELETE USING (true);
-
-
--- ====================================================================
--- OPTIONAL: CONNECT EXISTING TABLES
--- Run this if your tables already exist and you want to connect them
--- ====================================================================
--- ALTER TABLE orders ADD CONSTRAINT fk_orders_customer FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE;
--- ALTER TABLE orders ADD CONSTRAINT fk_orders_rider FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE SET NULL;
+-- ============================================================
+-- END
+-- ============================================================

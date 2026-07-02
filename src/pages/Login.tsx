@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../App';
 import { api } from '../lib/api';
 import { User, Role } from '../types';
@@ -20,6 +21,7 @@ import {
 
 export default function Login() {
   const { login } = useAuth();
+  const location = useLocation();
   const [step, setStep] = useState<'welcome' | 'login' | 'register'>('welcome');
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,12 @@ export default function Login() {
     loadUsers();
     loadDbConfig();
   }, []);
+
+  useEffect(() => {
+    if (location.search.includes('step=login')) {
+      setStep('login');
+    }
+  }, [location.search]);
 
   const loadDbConfig = async () => {
     try {

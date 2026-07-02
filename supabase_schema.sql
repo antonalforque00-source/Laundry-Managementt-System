@@ -67,15 +67,57 @@ CREATE TABLE IF NOT EXISTS feedbacks (
 );
 
 -- Ensure table-level access is ready for public requests (Supabase default setup)
--- Option A (Recommended for quick testing): Disable Row Level Security (RLS) altogether
+-- This disables Row-Level Security (RLS) altogether to allow direct, instant connections
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;
 
--- Option B (Alternative): Keep RLS enabled but allow public operations via permissive policies
--- CREATE POLICY "Allow public select on users" ON users FOR SELECT USING (true);
--- CREATE POLICY "Allow public insert on users" ON users FOR INSERT WITH CHECK (true);
--- CREATE POLICY "Allow public update on users" ON users FOR UPDATE USING (true);
--- ... (and so on for all tables)
+-- DOUBLE FAIL-SAFE: Create permissive public access policies just in case RLS remains active
+-- 1. Users Policies
+DROP POLICY IF EXISTS "Allow public select on users" ON users;
+CREATE POLICY "Allow public select on users" ON users FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert on users" ON users;
+CREATE POLICY "Allow public insert on users" ON users FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public update on users" ON users;
+CREATE POLICY "Allow public update on users" ON users FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Allow public delete on users" ON users;
+CREATE POLICY "Allow public delete on users" ON users FOR DELETE USING (true);
+
+-- 2. Orders Policies
+DROP POLICY IF EXISTS "Allow public select on orders" ON orders;
+CREATE POLICY "Allow public select on orders" ON orders FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert on orders" ON orders;
+CREATE POLICY "Allow public insert on orders" ON orders FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public update on orders" ON orders;
+CREATE POLICY "Allow public update on orders" ON orders FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Allow public delete on orders" ON orders;
+CREATE POLICY "Allow public delete on orders" ON orders FOR DELETE USING (true);
+
+-- 3. Inventory Policies
+DROP POLICY IF EXISTS "Allow public select on inventory" ON inventory;
+CREATE POLICY "Allow public select on inventory" ON inventory FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert on inventory" ON inventory;
+CREATE POLICY "Allow public insert on inventory" ON inventory FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public update on inventory" ON inventory;
+CREATE POLICY "Allow public update on inventory" ON inventory FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Allow public delete on inventory" ON inventory;
+CREATE POLICY "Allow public delete on inventory" ON inventory FOR DELETE USING (true);
+
+-- 4. Audit Logs Policies
+DROP POLICY IF EXISTS "Allow public select on audit_logs" ON audit_logs;
+CREATE POLICY "Allow public select on audit_logs" ON audit_logs FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert on audit_logs" ON audit_logs;
+CREATE POLICY "Allow public insert on audit_logs" ON audit_logs FOR INSERT WITH CHECK (true);
+
+-- 5. Feedbacks Policies
+DROP POLICY IF EXISTS "Allow public select on feedbacks" ON feedbacks;
+CREATE POLICY "Allow public select on feedbacks" ON feedbacks FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert on feedbacks" ON feedbacks;
+CREATE POLICY "Allow public insert on feedbacks" ON feedbacks FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public update on feedbacks" ON feedbacks;
+CREATE POLICY "Allow public update on feedbacks" ON feedbacks FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Allow public delete on feedbacks" ON feedbacks;
+CREATE POLICY "Allow public delete on feedbacks" ON feedbacks FOR DELETE USING (true);
+

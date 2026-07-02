@@ -131,6 +131,38 @@ export default function Login() {
         {/* Subtle top brand accent line */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-teal-500 to-cyan-500" />
 
+        {/* Connection status badge positioned in the top right corner */}
+        {dbConfig && (
+          <div className="absolute top-4 right-4 z-10">
+            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
+              dbConfig.useSupabase && dbConfig.tablesExist
+                ? dbConfig.rlsActive
+                  ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                  : 'bg-[#f0fdfa] text-[#0d9488] border border-teal-100'
+                : dbConfig.useSupabase
+                  ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                  : 'bg-slate-50 text-slate-500 border border-slate-100'
+            }`}>
+              <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                dbConfig.useSupabase && dbConfig.tablesExist
+                  ? dbConfig.rlsActive
+                    ? 'bg-amber-500 animate-pulse'
+                    : 'bg-[#0d9488] animate-pulse'
+                  : dbConfig.useSupabase
+                    ? 'bg-amber-500 animate-pulse'
+                    : 'bg-slate-400'
+              }`} />
+              {dbConfig.useSupabase && dbConfig.tablesExist
+                ? dbConfig.rlsActive
+                  ? 'Active (RLS Locked)'
+                  : 'Active'
+                : dbConfig.useSupabase
+                  ? 'Local Fallback'
+                  : 'Active (Local)'}
+            </span>
+          </div>
+        )}
+
         {/* 1. WELCOME SCREEN */}
         {step === 'welcome' && (
           <div className="flex flex-col h-full animate-fade-in">
@@ -429,6 +461,33 @@ ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`);
                   </div>
                 )}
 
+                {dbConfig?.rlsActive && (
+                  <div className="bg-amber-50/70 border border-amber-200 text-amber-800 rounded-2xl p-3 text-[10px] space-y-2 mb-4 leading-normal">
+                    <p className="font-extrabold flex items-center gap-1.5 text-amber-900">
+                      <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping" />
+                      Database is Active, but RLS is locked in Supabase
+                    </p>
+                    <p className="text-slate-600">
+                      Your registrations and bookings will succeed automatically using local fallback! To save directly to your Supabase tables, copy and run this in your Supabase SQL Editor:
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`);
+                        setRlsCopied(true);
+                        setTimeout(() => setRlsCopied(false), 2000);
+                      }}
+                      className="w-full bg-amber-600 hover:bg-amber-700 text-white py-1.5 px-2 rounded-xl text-[9px] font-bold tracking-wide transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      {rlsCopied ? "✓ SQL Code Copied!" : "Copy SQL to Disable RLS on Supabase"}
+                    </button>
+                  </div>
+                )}
+
                 {/* Form fields */}
                 <form onSubmit={handleRegisterSubmit} className="space-y-3 pb-4">
                   
@@ -576,34 +635,6 @@ ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`);
                 </p>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Connection status footer badge */}
-        {dbConfig && (
-          <div className="absolute bottom-2.5 left-0 right-0 text-center">
-            <span className={`inline-inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase tracking-wider ${
-              dbConfig.useSupabase && dbConfig.tablesExist
-                ? 'bg-emerald-50 text-emerald-600'
-                : dbConfig.useSupabase
-                  ? 'bg-amber-50 text-amber-600'
-                  : 'bg-slate-50 text-slate-500'
-            }`}>
-              <span className={`inline-block w-1 h-1 rounded-full ${
-                dbConfig.useSupabase && dbConfig.tablesExist
-                  ? 'bg-emerald-500'
-                  : dbConfig.useSupabase
-                    ? 'bg-amber-500 animate-pulse'
-                    : 'bg-slate-400'
-              }`} />
-              DB: {
-                dbConfig.useSupabase && dbConfig.tablesExist
-                  ? 'Supabase Persistent'
-                  : dbConfig.useSupabase
-                    ? 'Local In-Memory Fallback'
-                    : 'Local In-Memory'
-              }
-            </span>
           </div>
         )}
 

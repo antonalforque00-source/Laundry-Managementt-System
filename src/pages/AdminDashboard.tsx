@@ -515,6 +515,9 @@ export default function AdminDashboard() {
                   className="w-full text-xs p-2.5 border rounded-lg bg-slate-50 text-slate-800 outline-none focus:bg-white focus:border-[#0d9488]"
                 />
                 <p className="text-[9px] text-slate-400 mt-1">Leave blank to keep your current saved key.</p>
+                <p className="text-[9px] text-amber-600 font-medium leading-relaxed mt-1.5 bg-amber-50/50 p-2 rounded-lg border border-amber-100">
+                  💡 <strong>Pro-Tip:</strong> Using your Supabase <strong>service_role</strong> secret API key (instead of the <em>anon</em> public key) automatically bypasses Row-Level Security (RLS). This makes register, login, and orders work instantly without needing to configure policy rules or disable RLS!
+                </p>
               </div>
 
               <div className="flex items-center gap-2 pt-1">
@@ -671,7 +674,22 @@ ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`);
+ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;
+
+-- Permissive Policies
+CREATE POLICY "Allow public select on users" ON users FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on users" ON users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on users" ON users FOR UPDATE USING (true);
+CREATE POLICY "Allow public select on orders" ON orders FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on orders" ON orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on orders" ON orders FOR UPDATE USING (true);
+CREATE POLICY "Allow public select on inventory" ON inventory FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on inventory" ON inventory FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on inventory" ON inventory FOR UPDATE USING (true);
+CREATE POLICY "Allow public select on audit_logs" ON audit_logs FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on audit_logs" ON audit_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public select on feedbacks" ON feedbacks FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on feedbacks" ON feedbacks FOR INSERT WITH CHECK (true);`);
                   alert("SQL Schema copied to clipboard!");
                 }}
                 className="text-teal-400 hover:text-teal-300 font-extrabold underline shrink-0 cursor-pointer"
@@ -683,12 +701,20 @@ ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`);
               Please copy and execute this exact SQL block in your **Supabase SQL Editor** to create all five default tables and bypass Row-Level Security:
             </p>
             <pre className="overflow-x-auto max-h-40 bg-slate-950 p-2 rounded text-teal-400 select-all leading-normal whitespace-pre">
-{`-- 1. Create Tables & Disable RLS
+{`-- 1. Create Tables & Disable RLS / Set Permissive Policies
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`}
+ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;
+
+-- 2. Permissive Public Policies
+CREATE POLICY "Allow public select on users" ON users FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on users" ON users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on users" ON users FOR UPDATE USING (true);
+CREATE POLICY "Allow public select on orders" ON orders FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on orders" ON orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on orders" ON orders FOR UPDATE USING (true);`}
             </pre>
           </div>
         </div>

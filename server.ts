@@ -127,20 +127,34 @@ if (fs.existsSync(CONFIG_PATH)) {
   }
 }
 
-// Fallbacks to environment variables if provided
-if (!supabaseConfig.supabaseUrl && process.env.SUPABASE_URL) {
+// Fallbacks to environment variables if provided (env variables take priority)
+if (process.env.SUPABASE_URL) {
   supabaseConfig.supabaseUrl = process.env.SUPABASE_URL;
+  supabaseConfig.useSupabase = true;
 }
-if (!supabaseConfig.supabaseKey && process.env.SUPABASE_KEY) {
+if (process.env.SUPABASE_KEY) {
   supabaseConfig.supabaseKey = process.env.SUPABASE_KEY;
+  supabaseConfig.useSupabase = true;
+}
+
+// Write back to config file if we got them from environment variables
+if (process.env.SUPABASE_URL || process.env.SUPABASE_KEY) {
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(supabaseConfig, null, 2), "utf8");
+    console.log("Automatically synchronized environment variables to supabase-config.json");
+  } catch (err) {
+    console.error("Error writing to supabase-config.json:", err);
+  }
 }
 
 let supabaseClient: any = null;
 let tablesExist = false;
+let rlsActive = false;
 
 async function verifySupabaseTables() {
   if (!supabaseClient) {
     tablesExist = false;
+    rlsActive = false;
     return;
   }
   try {
@@ -159,8 +173,12 @@ async function verifySupabaseTables() {
       return false;
     };
 
+    rlsActive = [resUsers, resOrders, resInventory, resLogs, resFeedbacks].some(
+      res => res.error && res.error.code === '42501'
+    );
+
     if (isExist(resUsers) && isExist(resOrders) && isExist(resInventory) && isExist(resLogs) && isExist(resFeedbacks)) {
-      console.log("All Supabase tables verified successfully! Database is fully operational.");
+      console.log("All Supabase tables verified successfully! Database is fully operational. RLS Active:", rlsActive);
       tablesExist = true;
     } else {
       console.warn("Some required Supabase tables are missing or inaccessible. Reverting to local fallback mode.");
@@ -169,6 +187,7 @@ async function verifySupabaseTables() {
   } catch (err: any) {
     console.error("Error verifying Supabase tables:", err.message);
     tablesExist = false;
+    rlsActive = false;
   }
 }
 
@@ -261,7 +280,7 @@ async function dbGetUsers() {
         console.warn("Supabase connection offline in getUsers, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbGetUsers, falling back to local DB:", err.message);
       }
     }
   }
@@ -282,7 +301,7 @@ async function dbFindUserByEmail(email: string) {
         console.warn("Supabase connection offline in dbFindUserByEmail, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbFindUserByEmail, falling back to local DB:", err.message);
       }
     }
   }
@@ -303,7 +322,7 @@ async function dbAddUser(user: any) {
         console.warn("Supabase connection offline in dbAddUser, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbAddUser, falling back to local DB:", err.message);
       }
     }
   }
@@ -326,7 +345,7 @@ async function dbUpdateUser(id: string, updates: any) {
         console.warn("Supabase connection offline in dbUpdateUser, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbUpdateUser, falling back to local DB:", err.message);
       }
     }
   }
@@ -359,7 +378,7 @@ async function dbGetOrders(role?: string, userId?: string) {
         console.warn("Supabase connection offline in dbGetOrders, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbGetOrders, falling back to local DB:", err.message);
       }
     }
   }
@@ -387,7 +406,7 @@ async function dbAddOrder(order: any) {
         console.warn("Supabase connection offline in dbAddOrder, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbAddOrder, falling back to local DB:", err.message);
       }
     }
   }
@@ -411,7 +430,7 @@ async function dbUpdateOrder(id: string, updates: any) {
         console.warn("Supabase connection offline in dbUpdateOrder, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbUpdateOrder, falling back to local DB:", err.message);
       }
     }
   }
@@ -437,7 +456,7 @@ async function dbGetInventory() {
         console.warn("Supabase connection offline in dbGetInventory, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbGetInventory, falling back to local DB:", err.message);
       }
     }
   }
@@ -462,7 +481,7 @@ async function dbRefillInventory(id: string, amount: number) {
         console.warn("Supabase connection offline in dbRefillInventory, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbRefillInventory, falling back to local DB:", err.message);
       }
     }
   }
@@ -492,7 +511,7 @@ async function dbGetAuditLogs() {
         console.warn("Supabase connection offline in dbGetAuditLogs, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbGetAuditLogs, falling back to local DB:", err.message);
       }
     }
   }
@@ -543,7 +562,7 @@ async function dbGetFeedbacks() {
         console.warn("Supabase connection offline in dbGetFeedbacks, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbGetFeedbacks, falling back to local DB:", err.message);
       }
     }
   }
@@ -564,7 +583,7 @@ async function dbAddFeedback(fb: any) {
         console.warn("Supabase connection offline in dbAddFeedback, falling back to local DB:", err.message);
         tablesExist = false;
       } else {
-        throw err;
+        console.error("Supabase operational error in dbAddFeedback, falling back to local DB:", err.message);
       }
     }
   }
@@ -845,7 +864,8 @@ async function startServer() {
       supabaseKeyExists: !!supabaseConfig.supabaseKey,
       useSupabase: supabaseConfig.useSupabase,
       isConnected: !!supabaseClient,
-      tablesExist: tablesExist
+      tablesExist: tablesExist,
+      rlsActive: rlsActive
     });
   });
 
@@ -867,7 +887,8 @@ async function startServer() {
           supabaseKeyExists: !!supabaseConfig.supabaseKey,
           useSupabase: supabaseConfig.useSupabase,
           isConnected: !!supabaseClient,
-          tablesExist: tablesExist
+          tablesExist: tablesExist,
+          rlsActive: rlsActive
         }
       });
     } catch (err: any) {

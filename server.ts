@@ -5,6 +5,9 @@ import { randomUUID } from "crypto";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
+import os from "os";
+// @ts-ignore
+import qrcode from "qrcode-terminal";
 
 // --- Mock In-Memory Database ---
 let users = [
@@ -72,6 +75,41 @@ let auditLogs = [
 let feedbacks = [
   { id: "fb-1", customerName: "Alice Smith", rating: 5, review: "Smells wonderful and neatly folded!", type: "Review" }
 ];
+
+// --- Local File Database Persistence ---
+const LOCAL_DB_PATH = path.join(process.cwd(), "local-database.json");
+
+function loadLocalDb() {
+  if (fs.existsSync(LOCAL_DB_PATH)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, "utf8"));
+      if (data.users && Array.isArray(data.users)) users = data.users;
+      if (data.orders && Array.isArray(data.orders)) orders = data.orders;
+      if (data.inventory && Array.isArray(data.inventory)) inventory = data.inventory;
+      if (data.auditLogs && Array.isArray(data.auditLogs)) auditLogs = data.auditLogs;
+      if (data.feedbacks && Array.isArray(data.feedbacks)) feedbacks = data.feedbacks;
+      console.log("Loaded persistent JSON-file-based database successfully.");
+    } catch (err) {
+      console.error("Error loading local-database.json:", err);
+    }
+  } else {
+    saveLocalDb();
+  }
+}
+
+function saveLocalDb() {
+  try {
+    fs.writeFileSync(
+      LOCAL_DB_PATH,
+      JSON.stringify({ users, orders, inventory, auditLogs, feedbacks }, null, 2),
+      "utf8"
+    );
+  } catch (err) {
+    console.error("Error saving to local-database.json:", err);
+  }
+}
+
+loadLocalDb();
 
 // --- Supabase Config & Client Setup ---
 const CONFIG_PATH = path.join(process.cwd(), "supabase-config.json");
@@ -270,6 +308,7 @@ async function dbAddUser(user: any) {
     }
   }
   users.push(user);
+  saveLocalDb();
   return user;
 }
 
@@ -294,6 +333,7 @@ async function dbUpdateUser(id: string, updates: any) {
   const index = users.findIndex(u => u.id === id);
   if (index !== -1) {
     users[index] = { ...users[index], ...updates };
+    saveLocalDb();
     return users[index];
   }
   return null;
@@ -352,6 +392,7 @@ async function dbAddOrder(order: any) {
     }
   }
   orders.push(order);
+  saveLocalDb();
   return order;
 }
 
@@ -377,6 +418,7 @@ async function dbUpdateOrder(id: string, updates: any) {
   const index = orders.findIndex(o => o.id === id);
   if (index !== -1) {
     orders[index] = { ...orders[index], ...updates };
+    saveLocalDb();
     return orders[index];
   }
   return null;
@@ -427,6 +469,7 @@ async function dbRefillInventory(id: string, amount: number) {
   const item = inventory.find(i => i.id === id);
   if (item) {
     item.quantity += amount;
+    saveLocalDb();
     return item;
   }
   return null;
@@ -484,6 +527,7 @@ async function dbAddAuditLog(userName: string, action: string) {
     user: userName,
     action: action
   });
+  saveLocalDb();
 }
 
 async function dbGetFeedbacks() {
@@ -525,6 +569,7 @@ async function dbAddFeedback(fb: any) {
     }
   }
   feedbacks.unshift(fb);
+  saveLocalDb();
   return fb;
 }
 
@@ -929,7 +974,46 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    // Determine the local IP Address for easy mobile/phone scanning (similar to Expo Go)
+    let localIp = "localhost";
+    try {
+      const interfaces = os.networkInterfaces();
+      for (const interfaceName of Object.keys(interfaces)) {
+        const netList = interfaces[interfaceName] || [];
+        for (const net of netList) {
+          // Find non-internal IPv4
+          if (net.family === "IPv4" && !net.internal) {
+            localIp = net.address;
+            break;
+          }
+        }
+        if (localIp !== "localhost") break;
+      }
+    } catch (e) {
+      console.error("Failed to detect local IP address:", e);
+    }
+
+    const localUrl = `http://localhost:${PORT}`;
+    const networkUrl = `http://${localIp}:${PORT}`;
+
+    console.log("\n========================================================");
+    console.log("   🧺 LAUNDRY PORTAL DEPLOYMENT SYSTEM (LPDMS) ACTIVE   ");
+    console.log("========================================================");
+    console.log(`📡 Local Host URL:      ${localUrl}`);
+    console.log(`📶 Wi-Fi Network URL:    ${networkUrl}`);
+    console.log("========================================================\n");
+    console.log("📷 SCAN THIS QR CODE WITH YOUR MOBILE PHONE CAMERA / EXPO GO:");
+    console.log("(Make sure your mobile phone is connected to the same Wi-Fi/Internet network)\n");
+
+    try {
+      // Print the QR code for the network URL just like Expo Go does!
+      qrcode.generate(networkUrl, { small: true }, (code: string) => {
+        console.log(code);
+      });
+    } catch (err) {
+      console.log("Failed to print ASCII QR code in terminal, fallback url:", networkUrl);
+    }
+    console.log("\n========================================================\n");
   });
 }
 

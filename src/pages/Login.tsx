@@ -13,7 +13,9 @@ import {
   ArrowRight, 
   Shield, 
   UserPlus, 
-  Waves
+  Waves,
+  QrCode,
+  Smartphone
 } from 'lucide-react';
 
 export default function Login() {
@@ -39,10 +41,22 @@ export default function Login() {
   
   const [rlsCopied, setRlsCopied] = useState(false);
   const [schemaCopied, setSchemaCopied] = useState(false);
+  const [dbConfig, setDbConfig] = useState<any>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   useEffect(() => {
     loadUsers();
+    loadDbConfig();
   }, []);
+
+  const loadDbConfig = async () => {
+    try {
+      const config = await api.getSupabaseConfig();
+      setDbConfig(config);
+    } catch (err) {
+      console.error("Failed to load Supabase config:", err);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -153,6 +167,13 @@ export default function Login() {
                 className="w-full bg-[#0d9488] hover:bg-[#0b7a70] text-white py-3.5 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-md shadow-[#0d9488]/25 active:scale-98 transition-all text-xs cursor-pointer"
               >
                 Get Started <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => setShowQrModal(true)}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-98 transition-all text-xs cursor-pointer"
+              >
+                <QrCode className="w-4 h-4 text-[#0d9488]" /> Present on Mobile (QR Code)
               </button>
 
               <p className="text-[11px] text-slate-500 text-center font-semibold">
@@ -558,7 +579,83 @@ ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`);
           </div>
         )}
 
+        {/* Connection status footer badge */}
+        {dbConfig && (
+          <div className="absolute bottom-2.5 left-0 right-0 text-center">
+            <span className={`inline-inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase tracking-wider ${
+              dbConfig.useSupabase && dbConfig.tablesExist
+                ? 'bg-emerald-50 text-emerald-600'
+                : dbConfig.useSupabase
+                  ? 'bg-amber-50 text-amber-600'
+                  : 'bg-slate-50 text-slate-500'
+            }`}>
+              <span className={`inline-block w-1 h-1 rounded-full ${
+                dbConfig.useSupabase && dbConfig.tablesExist
+                  ? 'bg-emerald-500'
+                  : dbConfig.useSupabase
+                    ? 'bg-amber-500 animate-pulse'
+                    : 'bg-slate-400'
+              }`} />
+              DB: {
+                dbConfig.useSupabase && dbConfig.tablesExist
+                  ? 'Supabase Persistent'
+                  : dbConfig.useSupabase
+                    ? 'Local In-Memory Fallback'
+                    : 'Local In-Memory'
+              }
+            </span>
+          </div>
+        )}
+
       </div>
+
+      {/* Presentation QR Code Modal */}
+      {showQrModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-[32px] p-6 max-w-sm w-full border border-slate-100 shadow-2xl text-center space-y-4 relative animate-scale-up">
+            <div className="absolute top-4 right-4">
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="p-1 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mx-auto w-12 h-12 bg-teal-50 text-[#0d9488] rounded-2xl flex items-center justify-center mb-1">
+              <Smartphone className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-base font-black text-slate-900">Mobile Presentation Mode</h3>
+            <p className="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
+              Scan this QR code with your mobile phone camera (or Expo Go / QR scanner) to open and test this application live on your phone!
+            </p>
+
+            <div className="bg-slate-50 p-4 rounded-2xl flex justify-center border border-slate-100">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.href)}`}
+                alt="App QR Code"
+                className="w-40 h-40 rounded-lg shadow-sm border border-slate-200/50 bg-white"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
+            <div className="text-[10px] text-slate-400 font-medium break-all select-all">
+              URL: <span className="text-teal-600 font-semibold underline">{window.location.href}</span>
+            </div>
+
+            <button
+              onClick={() => setShowQrModal(false)}
+              className="w-full bg-[#0d9488] hover:bg-[#0b7a70] text-white py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-md shadow-[#0d9488]/15"
+            >
+              Done, continue to App
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

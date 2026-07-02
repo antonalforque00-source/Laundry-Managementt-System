@@ -126,5 +126,41 @@ export const api = {
   }> {
     const res = await fetch('/api/analytics');
     return handleResponse(res);
+  },
+
+  async getSupabaseConfig(): Promise<{
+    supabaseUrl: string;
+    supabaseKeyExists: boolean;
+    useSupabase: boolean;
+    isConnected: boolean;
+    tablesExist: boolean;
+  }> {
+    const res = await fetch('/api/supabase/config');
+    return handleResponse(res);
+  },
+
+  async updateSupabaseConfig(data: { supabaseUrl?: string, supabaseKey?: string, useSupabase?: boolean }): Promise<any> {
+    const res = await fetch('/api/supabase/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return handleResponse(res);
+  },
+
+  async testSupabase(data: { supabaseUrl?: string, supabaseKey?: string }): Promise<{ success: boolean; message: string; error?: string }> {
+    const res = await fetch('/api/supabase/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return handleResponse(res);
+  },
+
+  async seedSupabase(): Promise<{ success: boolean; message: string; error?: string }> {
+    const res = await fetch('/api/supabase/seed', {
+      method: 'POST'
+    });
+    return handleResponse(res);
   }
 };

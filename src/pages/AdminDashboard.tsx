@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { Order, User, AuditLog, STATUS_LABELS } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { 
   Users, DollarSign, TrendingUp, PackageSearch, Award, ShieldAlert, 
-  MapPin, Settings, Check, Trash2, Calendar, ClipboardList 
+  MapPin, Settings, Check, Trash2, Calendar, ClipboardList, Database, Save, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -15,7 +15,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   // Active Admin Sub-Tab
-  const [activeTab, setActiveTab] = useState<'analytics' | 'orders' | 'services' | 'users'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'orders' | 'services' | 'users' | 'database'>('analytics');
 
   // Pricing State
   const [prices, setPrices] = useState({
@@ -25,9 +25,36 @@ export default function AdminDashboard() {
     ironing: 300
   });
 
+  // Database Connection / Configuration State
+  const [dbConfig, setDbConfig] = useState<any>(null);
+  const [dbUrl, setDbUrl] = useState('');
+  const [dbKey, setDbKey] = useState('');
+  const [dbUse, setDbUse] = useState(false);
+  const [dbSaving, setDbSaving] = useState(false);
+  const [dbSaveError, setDbSaveError] = useState('');
+  const [dbSaveSuccess, setDbSaveSuccess] = useState('');
+  const [dbTesting, setDbTesting] = useState(false);
+  const [dbTestError, setDbTestError] = useState('');
+  const [dbTestSuccess, setDbTestSuccess] = useState('');
+  const [dbSeeding, setDbSeeding] = useState(false);
+  const [dbSeedError, setDbSeedError] = useState('');
+  const [dbSeedSuccess, setDbSeedSuccess] = useState('');
+
   useEffect(() => {
     loadAdminData();
+    loadDbConfig();
   }, []);
+
+  const loadDbConfig = async () => {
+    try {
+      const config = await api.getSupabaseConfig();
+      setDbConfig(config);
+      setDbUrl(config.supabaseUrl || '');
+      setDbUse(config.useSupabase);
+    } catch (err) {
+      console.error("Failed to load Supabase config:", err);
+    }
+  };
 
   const loadAdminData = async () => {
     try {
@@ -79,6 +106,72 @@ export default function AdminDashboard() {
     setPrices(prev => ({ ...prev, [serviceKey]: Number(val) }));
   };
 
+  const handleSaveDbConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDbSaveError('');
+    setDbSaveSuccess('');
+    setDbSaving(true);
+    try {
+      const res = await api.updateSupabaseConfig({
+        supabaseUrl: dbUrl,
+        supabaseKey: dbKey || undefined, // only send if modified
+        useSupabase: dbUse
+      });
+      if (res.success) {
+        setDbSaveSuccess(res.message || 'Config saved successfully!');
+        setDbConfig(res.config);
+        // Refresh layout
+        loadDbConfig();
+      } else {
+        setDbSaveError(res.error || 'Failed to save config');
+      }
+    } catch (err: any) {
+      setDbSaveError(err.message || 'Error occurred while saving configuration');
+    } finally {
+      setDbSaving(false);
+    }
+  };
+
+  const handleTestDbConnection = async () => {
+    setDbTestError('');
+    setDbTestSuccess('');
+    setDbTesting(true);
+    try {
+      const res = await api.testSupabase({
+        supabaseUrl: dbUrl,
+        supabaseKey: dbKey || undefined
+      });
+      if (res.success) {
+        setDbTestSuccess(res.message || 'Connection test successful!');
+      } else {
+        setDbTestError(res.error || 'Connection failed');
+      }
+    } catch (err: any) {
+      setDbTestError(err.message || 'Connection failed');
+    } finally {
+      setDbTesting(false);
+    }
+  };
+
+  const handleSeedDatabase = async () => {
+    setDbSeedError('');
+    setDbSeedSuccess('');
+    setDbSeeding(true);
+    try {
+      const res = await api.seedSupabase();
+      if (res.success) {
+        setDbSeedSuccess(res.message || 'Seeded successfully!');
+        loadAdminData(); // Reload analytics logs etc.
+      } else {
+        setDbSeedError(res.error || 'Failed to seed database');
+      }
+    } catch (err: any) {
+      setDbSeedError(err.message || 'Seeding failed');
+    } finally {
+      setDbSeeding(false);
+    }
+  };
+
   if (!stats || loading) return <div className="p-8 text-center text-slate-500 text-xs">Assembling administrative charts...</div>;
 
   const totalCalculatedRevenue = orders.reduce((acc, o) => acc + (o.isPaid ? o.cost : 0), 0);
@@ -91,12 +184,12 @@ export default function AdminDashboard() {
           <h2 className="text-lg font-black text-slate-900 leading-tight">Admin Overview</h2>
           <p className="text-[10px] text-slate-400 mt-0.5">Global LPDMS System Controls</p>
         </div>
-        <div className="flex bg-slate-100 p-1 rounded-lg">
-          {(['analytics', 'orders', 'services', 'users'] as const).map(tab => (
+        <div className="flex bg-slate-100 p-1 rounded-lg flex-wrap gap-1">
+          {(['analytics', 'orders', 'services', 'users', 'database'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-2 py-1 text-[9px] font-extrabold rounded uppercase tracking-wider ${
+              className={`px-2 py-1 text-[9px] font-extrabold rounded uppercase tracking-wider cursor-pointer ${
                 activeTab === tab ? 'bg-[#0d9488] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
@@ -340,6 +433,263 @@ export default function AdminDashboard() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'database' && (
+        <div className="space-y-4">
+          <div className="border-b pb-2 flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                <Database className="w-4 h-4 text-[#0d9488]" />
+                Supabase Integration Diagnostics & Settings
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Manage live remote storage connection and schema population</p>
+            </div>
+            <button 
+              onClick={() => { loadDbConfig(); loadAdminData(); }}
+              className="p-1 text-slate-400 hover:text-slate-600 active:rotate-180 transition-all duration-300"
+              title="Refresh connection status"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* 1. Connection Banner */}
+          <div className={`p-4 rounded-xl border ${
+            dbConfig?.useSupabase && dbConfig?.tablesExist
+              ? 'bg-emerald-50/60 border-emerald-200 text-emerald-800'
+              : dbConfig?.useSupabase
+                ? 'bg-amber-50/70 border-amber-200 text-amber-800'
+                : 'bg-slate-50 border-slate-200 text-slate-700'
+          } text-xs space-y-2`}>
+            <div className="flex items-center gap-2 font-black uppercase tracking-wide text-[10px]">
+              <span className={`inline-block w-2.5 h-2.5 rounded-full ${
+                dbConfig?.useSupabase && dbConfig?.tablesExist
+                  ? 'bg-emerald-500 animate-pulse'
+                  : dbConfig?.useSupabase
+                    ? 'bg-amber-500 animate-ping'
+                    : 'bg-slate-400'
+              }`} />
+              Database Status:{' '}
+              {dbConfig?.useSupabase && dbConfig?.tablesExist
+                ? 'Supabase Connected (Live Database)'
+                : dbConfig?.useSupabase
+                  ? 'Local Offline Fallback (Supabase Unreachable/Tables Missing)'
+                  : 'In-Memory Only (Transitional Demo Mode)'}
+            </div>
+            <p className="leading-relaxed text-[10px]">
+              {dbConfig?.useSupabase && dbConfig?.tablesExist
+                ? '🎉 Your application is successfully writing all registered users, customer bookings, staff inventory, and audit logs directly into Supabase! Any action is persistent and safe.'
+                : dbConfig?.useSupabase
+                  ? '⚠️ The server attempted to connect to Supabase, but failed or found missing tables. To prevent app crashes, it fell back to local in-memory storage. Registered users and bookings are temporary and WILL NOT appear in Supabase until the connection is fixed and tables are created.'
+                  : 'Your application is running in an offline-first sandbox mode. Registrations and orders are stored in temporary RAM. Enable the toggle below to activate persistent Supabase cloud synchronization.'}
+            </p>
+          </div>
+
+          {/* 2. Config Form */}
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+            <h4 className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">Connection Parameters</h4>
+            
+            <form onSubmit={handleSaveDbConfig} className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 mb-1">Supabase Project URL</label>
+                <input 
+                  type="text" 
+                  value={dbUrl} 
+                  onChange={e => setDbUrl(e.target.value)}
+                  placeholder="https://your-project.supabase.co"
+                  className="w-full text-xs p-2.5 border rounded-lg bg-slate-50 text-slate-800 outline-none focus:bg-white focus:border-[#0d9488]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 mb-1">Supabase Service Role / Anon Key</label>
+                <input 
+                  type="password" 
+                  value={dbKey} 
+                  onChange={e => setDbKey(e.target.value)}
+                  placeholder={dbConfig?.supabaseKeyExists ? "•••••••••••••••••••••••• (Saved)" : "Enter your Supabase key"}
+                  className="w-full text-xs p-2.5 border rounded-lg bg-slate-50 text-slate-800 outline-none focus:bg-white focus:border-[#0d9488]"
+                />
+                <p className="text-[9px] text-slate-400 mt-1">Leave blank to keep your current saved key.</p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input 
+                  type="checkbox" 
+                  id="dbUse" 
+                  checked={dbUse} 
+                  onChange={e => setDbUse(e.target.checked)}
+                  className="w-4 h-4 text-[#0d9488] rounded accent-[#0d9488] cursor-pointer"
+                />
+                <label htmlFor="dbUse" className="text-[11px] font-bold text-slate-700 cursor-pointer select-none">
+                  Activate Persistent Supabase Storage
+                </label>
+              </div>
+
+              {dbSaveSuccess && (
+                <div className="p-2 text-[10px] bg-emerald-50 text-emerald-700 rounded border border-emerald-100">
+                  {dbSaveSuccess}
+                </div>
+              )}
+              {dbSaveError && (
+                <div className="p-2 text-[10px] bg-rose-50 text-rose-700 rounded border border-rose-100">
+                  {dbSaveError}
+                </div>
+              )}
+              {dbTestSuccess && (
+                <div className="p-2 text-[10px] bg-blue-50 text-blue-700 rounded border border-blue-100 leading-normal">
+                  {dbTestSuccess}
+                </div>
+              )}
+              {dbTestError && (
+                <div className="p-2 text-[10px] bg-amber-50 text-amber-700 rounded border border-amber-100 leading-normal">
+                  {dbTestError}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={dbSaving}
+                  className="flex-1 bg-[#0d9488] hover:bg-[#0b7a70] text-white py-2 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {dbSaving ? 'Saving...' : 'Save Config'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTestDbConnection}
+                  disabled={dbTesting}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {dbTesting ? 'Testing...' : 'Test Connection'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* 3. Database Seed Card */}
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+            <h4 className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">Initialization Utilities</h4>
+            <p className="text-[10px] text-slate-500 leading-relaxed">
+              If you have successfully created the tables in your Supabase database but they are completely empty, click the button below to seed all initial system accounts (Admin, Staff, Rider, Customers), default inventory products, and initial audit trails!
+            </p>
+
+            {dbSeedSuccess && (
+              <div className="p-2 text-[10px] bg-emerald-50 text-emerald-700 rounded border border-emerald-100">
+                {dbSeedSuccess}
+              </div>
+            )}
+            {dbSeedError && (
+              <div className="p-2 text-[10px] bg-rose-50 text-rose-700 rounded border border-rose-100">
+                {dbSeedError}
+              </div>
+            )}
+
+            <button
+              onClick={handleSeedDatabase}
+              disabled={dbSeeding || !dbConfig?.isConnected}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-2 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${dbSeeding ? 'animate-spin' : ''}`} />
+              {dbSeeding ? 'Seeding Tables...' : 'Seed Default Demo Data inside Supabase'}
+            </button>
+            {!dbConfig?.isConnected && (
+              <p className="text-[8px] text-amber-600 font-bold text-center">⚠️ Connect and Save your Supabase Credentials first to enable seeding.</p>
+            )}
+          </div>
+
+          {/* 4. SQL Schema Instructions */}
+          <div className="bg-slate-900 text-slate-300 p-4 rounded-xl shadow-xs space-y-2 font-mono text-[9px] overflow-hidden">
+            <div className="flex items-center justify-between text-[10px] text-white font-sans font-bold border-b border-slate-800 pb-1.5">
+              <span>Required PostgreSQL Schema Setup</span>
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(`CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  role TEXT NOT NULL,
+  points INTEGER DEFAULT 0,
+  address TEXT,
+  phone TEXT,
+  rating NUMERIC DEFAULT 0,
+  status TEXT,
+  station TEXT
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL,
+  customer_name TEXT NOT NULL,
+  service TEXT NOT NULL,
+  status TEXT NOT NULL,
+  cost NUMERIC DEFAULT 0,
+  weight NUMERIC DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  special_instructions TEXT,
+  payment_method TEXT,
+  is_paid BOOLEAN DEFAULT FALSE,
+  qr_code_value TEXT,
+  address TEXT,
+  phone TEXT,
+  rider_id TEXT,
+  rider_name TEXT,
+  rating INTEGER,
+  review TEXT
+);
+
+CREATE TABLE IF NOT EXISTS inventory (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  quantity NUMERIC NOT NULL DEFAULT 0,
+  unit TEXT NOT NULL,
+  min_limit NUMERIC NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  user_name TEXT NOT NULL,
+  action TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS feedbacks (
+  id TEXT PRIMARY KEY,
+  customer_name TEXT NOT NULL,
+  rating INTEGER NOT NULL,
+  review TEXT,
+  type TEXT NOT NULL DEFAULT 'Review'
+);
+
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`);
+                  alert("SQL Schema copied to clipboard!");
+                }}
+                className="text-teal-400 hover:text-teal-300 font-extrabold underline shrink-0 cursor-pointer"
+              >
+                Copy SQL Code
+              </button>
+            </div>
+            <p className="text-slate-400 font-sans leading-relaxed text-[9px] pb-1 font-semibold">
+              Please copy and execute this exact SQL block in your **Supabase SQL Editor** to create all five default tables and bypass Row-Level Security:
+            </p>
+            <pre className="overflow-x-auto max-h-40 bg-slate-950 p-2 rounded text-teal-400 select-all leading-normal whitespace-pre">
+{`-- 1. Create Tables & Disable RLS
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE feedbacks DISABLE ROW LEVEL SECURITY;`}
+            </pre>
           </div>
         </div>
       )}

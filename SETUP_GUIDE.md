@@ -32,7 +32,14 @@ Tell npm to install by bypassing strict React peer versions:
 npm install --legacy-peer-deps
 ```
 
-After doing either of these, running **`npx expo start`** or **`npm run dev`** will run perfectly without any errors!
+---
+
+## 🛠️ HOW TO FIX: "module is not defined in ES module scope" or "ENOENT favicon.png" (SOLVED!)
+
+If you previously encountered errors like **`AppEntry.js: module is not defined in ES module scope`** or **`ENOENT: no such file or directory, open favicon.png`** when starting Expo, they have been **100% solved and automated** in the codebase:
+
+1. **Module Mismatch Solved:** We removed `"type": "module"` from the root `package.json`. This ensures Expo/Metro/Babel reads `.js` and config files as standard CommonJS without getting conflicts.
+2. **Missing Assets Automated:** We created an automated self-healing script at `/scripts/init-assets.js`. It runs automatically every time you run `npm install`, `npm run dev`, or `npm run expo`. It checks if `favicon.png`, `icon.png`, `splash.png`, and `adaptive-icon.png` exist, and automatically creates them if they are missing!
 
 ---
 

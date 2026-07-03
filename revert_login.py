@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import base64
+import os
+
+login_content = """import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../App';
 import { api } from '../lib/api';
@@ -533,3 +536,9 @@ export default function Login() {
     </div>
   );
 }
+"""
+
+with open('src/pages/Login.tsx', 'w') as f:
+    f.write(login_content)
+
+print("Restored Login.tsx")

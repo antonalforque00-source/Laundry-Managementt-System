@@ -25,7 +25,8 @@
   },
   "include": [
     "src",
-    "server.ts"
+    "server.ts",
+    "App.tsx"
   ],
   "exclude": [
     "node_modules",
